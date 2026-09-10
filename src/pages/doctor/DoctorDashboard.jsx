@@ -29,7 +29,10 @@ import {
   ChevronDown,
   Phone,
   Flame,
-  AlertCircle
+  AlertCircle,
+  Thermometer,
+  Wind,
+  Zap
 } from 'lucide-react'
 import { getAllDoctorPatients, updateRegisteredPatientField } from '../../services/sessionStore'
 import { isDoctorAuthenticated, getDoctorProfile, logoutDoctor } from '../../services/doctorAuthService'
@@ -802,21 +805,26 @@ export default function DoctorDashboard() {
                     {/* Vitals Telemetry Ribbon */}
                     {p.vitals && (
                       <div className="flex items-center gap-2 flex-wrap py-1 text-xs">
-                        <span className="inline-flex items-center gap-1 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
-                          <span className="text-rose-600">🩸 BP:</span> {p.vitals.bp}{p.vitals.bp && !p.vitals.bp.includes('mmHg') ? ' mmHg' : ''}
+                        <span className="inline-flex items-center gap-1.5 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
+                          <Activity className="size-3.5 text-rose-600" />
+                          <span>BP: {p.vitals.bp}{p.vitals.bp && !p.vitals.bp.includes('mmHg') ? ' mmHg' : ''}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
-                          <span className="text-red-500">❤️ HR:</span> {p.vitals.hr || '78 bpm'}
+                        <span className="inline-flex items-center gap-1.5 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
+                          <Heart className="size-3.5 text-red-500" />
+                          <span>HR: {p.vitals.hr || '78 bpm'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
-                          <span className="text-cyan-600">🫁 SpO2:</span> {p.vitals.spo2 || '98%'}
+                        <span className="inline-flex items-center gap-1.5 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
+                          <Wind className="size-3.5 text-cyan-600" />
+                          <span>SpO2: {p.vitals.spo2 || '98%'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
-                          <span className="text-amber-600">🌡️ Temp:</span> {p.vitals.temp || '98.6°F'}
+                        <span className="inline-flex items-center gap-1.5 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
+                          <Thermometer className="size-3.5 text-amber-600" />
+                          <span>Temp: {p.vitals.temp || '98.6°F'}</span>
                         </span>
                         {p.vitals.pain && (
-                          <span className="inline-flex items-center gap-1 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
-                            <span className="text-rose-600">⚡ Pain:</span> {p.vitals.pain}
+                          <span className="inline-flex items-center gap-1.5 font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800">
+                            <Zap className="size-3.5 text-rose-600" />
+                            <span>Pain: {p.vitals.pain}</span>
                           </span>
                         )}
                       </div>

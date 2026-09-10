@@ -29,6 +29,7 @@ import ClinicalHistoryFormView from '../../components/ClinicalHistoryFormView'
 import TouchNumericKeypad from '../../components/TouchNumericKeypad'
 import TouchDatePicker from '../../components/TouchDatePicker'
 import LLMConfigModal from '../../components/LLMConfigModal'
+import ComplaintVectorIcon from '../../components/ComplaintVectorIcon'
 import { useInterview } from '../../hooks/useInterview'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
@@ -42,14 +43,14 @@ import { speakText, stopSpeech } from '../../services/audioService'
 import { getLLMConfig, generateQuestionsWithLLM } from '../../services/aiQuestionGenerator'
 
 const QUICK_COMPLAINT_CHIPS = [
-  { id: 'knee_pain', label: 'Joint / Knee Pain', labelHi: 'जोड़ों / घुटने में दर्द', icon: '🦵' },
-  { id: 'skin_rash', label: 'Skin Rash / Allergy', labelHi: 'त्वचा / खुजली / दाने', icon: '🩹' },
-  { id: 'eye_problem', label: 'Eye Problem', labelHi: 'आंखों की समस्या', icon: '👁️' },
-  { id: 'ear_throat', label: 'Ear / Throat Pain', labelHi: 'कान / गले में दर्द', icon: '👂' },
-  { id: 'urinary', label: 'Urinary Burning', labelHi: 'पेशाब में जलन', icon: '🚽' },
-  { id: 'dizziness', label: 'Dizziness / Weakness', labelHi: 'चक्कर / कमजोरी', icon: '😵' },
-  { id: 'dental', label: 'Toothache', labelHi: 'दांत में दर्द', icon: '🦷' },
-  { id: 'diabetes', label: 'Sugar / BP Check', labelHi: 'शुगर / बीपी जांच', icon: '🩸' },
+  { id: 'knee_pain', label: 'Joint / Knee Pain', labelHi: 'जोड़ों / घुटने में दर्द' },
+  { id: 'skin_rash', label: 'Skin Rash / Allergy', labelHi: 'त्वचा / खुजली / दाने' },
+  { id: 'eye_problem', label: 'Eye Problem', labelHi: 'आंखों की समस्या' },
+  { id: 'ear_throat', label: 'Ear / Throat Pain', labelHi: 'कान / गले में दर्द' },
+  { id: 'urinary', label: 'Urinary Burning', labelHi: 'पेशाब में जलन' },
+  { id: 'dizziness', label: 'Dizziness / Weakness', labelHi: 'चक्कर / कमजोरी' },
+  { id: 'dental', label: 'Toothache', labelHi: 'दांत में दर्द' },
+  { id: 'diabetes', label: 'Sugar / BP Check', labelHi: 'शुगर / बीपी जांच' },
 ]
 
 export default function InterviewScreen() {
@@ -624,13 +625,11 @@ export default function InterviewScreen() {
                           key={opt.id}
                           type="button"
                           onClick={() => handleComplaintSelect(opt.id)}
-                          className="p-3 text-left border border-slate-200/90 rounded-2xl bg-white hover:border-teal-500 hover:bg-teal-50/20 active:scale-[0.98] transition-all cursor-pointer shadow-2xs flex flex-col justify-between h-24 group"
+                          className="p-3 text-left border border-slate-200/90 rounded-2xl bg-white hover:border-teal-500 hover:bg-teal-50/20 active:scale-[0.98] transition-all cursor-pointer shadow-2xs flex flex-col justify-between h-28 group"
                         >
-                          <span className="text-2xl w-9 h-9 rounded-xl bg-slate-50 group-hover:bg-white group-hover:shadow-2xs flex items-center justify-center transition-all">
-                            {opt.icon}
-                          </span>
-                          <div>
-                            <span className="block text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+                          <ComplaintVectorIcon id={opt.id} size="md" />
+                          <div className="mt-1">
+                            <span className="block text-xs sm:text-sm font-bold text-slate-900 leading-tight group-hover:text-teal-900 transition-colors">
                               {nativeLabel}
                             </span>
                             {subLabel && subLabel !== nativeLabel && (
@@ -650,11 +649,11 @@ export default function InterviewScreen() {
                     <button
                       type="button"
                       onClick={() => handleComplaintSelect('breathing')}
-                      className="p-2.5 text-left border border-slate-200/90 rounded-xl bg-white hover:border-teal-500 hover:bg-teal-50/20 transition cursor-pointer flex items-center gap-2.5 shadow-2xs"
+                      className="p-2.5 text-left border border-slate-200/90 rounded-xl bg-white hover:border-teal-500 hover:bg-teal-50/20 transition cursor-pointer flex items-center gap-2.5 shadow-2xs group"
                     >
-                      <span className="text-xl w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center">💨</span>
+                      <ComplaintVectorIcon id="breathing" size="sm" />
                       <div className="min-w-0">
-                        <span className="block text-xs font-bold text-slate-900 truncate">
+                        <span className="block text-xs font-bold text-slate-900 truncate group-hover:text-teal-900 transition-colors">
                           {lang === 'hi' ? 'सांस लेने में तकलीफ' : 'Breathing Difficulty'}
                         </span>
                         {lang !== 'en' && (
@@ -674,11 +673,11 @@ export default function InterviewScreen() {
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-lg w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-teal-700">✍️</span>
+                        <ComplaintVectorIcon id="other" size="sm" />
                         <span className="text-xs font-bold truncate">
                           {showOtherComplaints
-                            ? t('hideOtherComplaints', 'Hide other complaints')
-                            : t('typeOtherComplaint', '+ Other Complaints (Type / Speak)')}
+                            ? (lang === 'hi' ? 'अन्य शिकायतें छिपाएं' : 'Hide other complaints')
+                            : (lang === 'hi' ? '+ अन्य शिकायत (लिखें / बोलें)' : '+ Other Complaints (Type / Speak)')}
                         </span>
                       </div>
                       <span className="text-xs font-bold text-teal-700 shrink-0">
@@ -734,7 +733,7 @@ export default function InterviewScreen() {
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <span className="text-sm">📝</span>
+                            <FileText className="size-4 text-teal-700" />
                             <span>{lang === 'hi' ? 'अपनी मुख्य समस्या का नाम लिखें:' : 'Type your specific health complaint:'}</span>
                           </label>
                           {customComplaintInput && (
@@ -820,7 +819,7 @@ export default function InterviewScreen() {
                                     : 'bg-white text-slate-700 border-slate-200/90 hover:border-teal-500 hover:bg-teal-50/40 shadow-2xs'
                                 }`}
                               >
-                                <span>{chip.icon}</span>
+                                <ComplaintVectorIcon id={chip.id} size="sm" withBackground={false} />
                                 <span>{chipLabel}</span>
                               </button>
                             )

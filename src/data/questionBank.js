@@ -10,7 +10,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'chest_pain',
     label: 'Chest Pain',
-    icon: '❤️',
+    icon: 'chest_pain',
     labels: {
       hi: 'सीने में दर्द',
       bn: 'বুকে ব্যথা',
@@ -26,7 +26,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'fever',
     label: 'Fever',
-    icon: '🌡️',
+    icon: 'fever',
     labels: {
       hi: 'बुखार',
       bn: 'জ্বর',
@@ -42,7 +42,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'cough',
     label: 'Cough',
-    icon: '🫁',
+    icon: 'cough',
     labels: {
       hi: 'खांसी',
       bn: 'কাশি',
@@ -58,7 +58,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'stomach_pain',
     label: 'Stomach Pain',
-    icon: '🤢',
+    icon: 'stomach_pain',
     labels: {
       hi: 'पेट दर्द',
       bn: 'পেটে ব্যথা',
@@ -74,7 +74,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'headache',
     label: 'Headache',
-    icon: '🤕',
+    icon: 'headache',
     labels: {
       hi: 'सिरदर्द',
       bn: 'মাথাব্যথা',
@@ -90,7 +90,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'back_pain',
     label: 'Back Pain',
-    icon: '🦴',
+    icon: 'back_pain',
     labels: {
       hi: 'कमर दर्द',
       bn: 'পিঠে ব্যথা',
@@ -106,7 +106,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'breathing',
     label: 'Breathing Difficulty',
-    icon: '💨',
+    icon: 'breathing',
     labels: {
       hi: 'सांस लेने में तकलीफ',
       bn: 'শ্বাসকষ্ট',
@@ -122,7 +122,7 @@ export const COMPLAINT_OPTIONS = [
   {
     id: 'other',
     label: 'Other Complaint',
-    icon: '➕',
+    icon: 'other',
     labels: {
       hi: 'अन्य शिकायत',
       bn: 'অন্যান্য সমস্যা',
