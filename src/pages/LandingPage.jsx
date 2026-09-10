@@ -130,19 +130,19 @@ export default function LandingPage() {
             )}
 
             <button
+              onClick={() => navigate('/doctor/login')}
+              className="glass-pill px-3.5 py-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/80 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <Stethoscope className="size-3.5 text-emerald-600" />
+              <span>Doctor Portal</span>
+            </button>
+
+            <button
               onClick={() => navigate('/splash')}
               className="glass-pill px-3.5 py-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 border border-teal-200 bg-teal-50/50 hover:bg-teal-50 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <Smartphone className="size-3.5 text-teal-600" />
               <span>Mobile App</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/doctor')}
-              className="glass-pill px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:text-cobalt border border-slate-200 transition cursor-pointer hidden md:flex items-center gap-1.5"
-            >
-              <Stethoscope className="size-3.5" />
-              <span>Doctor Portal</span>
             </button>
           </div>
         </nav>
@@ -211,14 +211,6 @@ export default function LandingPage() {
             >
               <Activity className="size-4 text-cobalt" />
               <span>Explore MediKiosk Terminal</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/doctor')}
-              className="btn-bionic-outline px-6 py-3.5 rounded-full text-xs sm:text-sm font-bold shadow-xs flex items-center gap-2"
-            >
-              <Stethoscope className="size-4 text-emerald" />
-              <span>Physician Workbench</span>
             </button>
           </motion.div>
 

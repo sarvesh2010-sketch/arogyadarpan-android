@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { SpeechRecognition as CapSpeechRecognition } from '@capacitor-community/speech-recognition'
+import { AudioSnippetRecorder } from '../services/audioService'
 
 /**
  * Map application language codes to standard BCP-47 speech recognition locales
@@ -17,176 +20,254 @@ export const SPEECH_LOCALE_MAP = {
 }
 
 /**
- * Custom hook for Web Speech API voice input with audio level analysis & microphone management
- * Works on Chrome/Edge — gracefully degrades in unsupported environments
+ * Custom hook for Speech Recognition supporting both native Android (Capacitor)
+ * and Web Speech API with audio snippet recording & graceful error fallbacks.
  */
 export function useVoiceInput({ lang = 'en-IN', continuous = false, onResult } = {}) {
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [interimTranscript, setInterimTranscript] = useState('')
-  const [isSupported, setIsSupported] = useState(false)
+  const [isSupported, setIsSupported] = useState(true)
   const [error, setError] = useState(null)
-  const [audioLevel, setAudioLevel] = useState(0) // 0 to 100 for visualizer
-  const [permissionState, setPermissionState] = useState('prompt') // 'granted' | 'denied' | 'prompt'
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null)
 
+  const isNative = Capacitor.isNativePlatform()
   const recognitionRef = useRef(null)
-  const audioContextRef = useRef(null)
-  const analyserRef = useRef(null)
-  const animFrameRef = useRef(null)
-  const streamRef = useRef(null)
+  const onResultRef = useRef(onResult)
+  const recorderRef = useRef(null)
+  const nativeListenersRef = useRef([])
+  const interimTranscriptRef = useRef('')
+
+  // Keep callback reference updated
+  useEffect(() => {
+    onResultRef.current = onResult
+  }, [onResult])
+
+  // Keep interim transcript ref updated
+  useEffect(() => {
+    interimTranscriptRef.current = interimTranscript
+  }, [interimTranscript])
 
   // Map language to proper BCP-47 speech locale
   const speechLang = SPEECH_LOCALE_MAP[lang] || lang || 'en-IN'
 
+  // Initialize Speech Support
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (SpeechRecognition) {
+    if (isNative) {
+      // Native Android check via Capacitor plugin
       setIsSupported(true)
-      const recognition = new SpeechRecognition()
-      recognition.continuous = continuous
-      recognition.interimResults = true
-      recognition.lang = speechLang
-      recognition.maxAlternatives = 3
+      CapSpeechRecognition.available()
+        .then((res) => {
+          setIsSupported(res?.available !== false)
+        })
+        .catch(() => {
+          setIsSupported(true) // Attempt anyway on Android
+        })
 
-      recognition.onresult = (event) => {
-        let interim = ''
-        let final = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i]
-          if (result.isFinal) {
-            final += result[0].transcript
+      // Setup Native Listeners
+      const setupNativeListeners = async () => {
+        try {
+          const partialSub = await CapSpeechRecognition.addListener('partialResults', (data) => {
+            if (data?.matches && data.matches.length > 0) {
+              const heard = data.matches[0]
+              setInterimTranscript(heard)
+            }
+          })
+
+          const stateSub = await CapSpeechRecognition.addListener('listeningState', (state) => {
+            if (state?.status === 'stopped') {
+              setIsListening(false)
+              const finalHeard = interimTranscriptRef.current
+              if (finalHeard) {
+                setTranscript(prev => (prev ? `${prev} ${finalHeard}` : finalHeard).trim())
+                setInterimTranscript('')
+                onResultRef.current?.(finalHeard)
+              }
+            } else if (state?.status === 'started') {
+              setIsListening(true)
+            }
+          })
+
+          nativeListenersRef.current = [partialSub, stateSub]
+        } catch (err) {
+          console.warn('Could not attach native speech listeners:', err)
+        }
+      }
+
+      setupNativeListeners()
+
+      return () => {
+        nativeListenersRef.current.forEach((sub) => {
+          try {
+            sub?.remove?.()
+          } catch { /* ignore */ }
+        })
+      }
+    } else {
+      // Standard Web Speech API fallback for desktop / browser testing
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (SpeechRecognition) {
+        setIsSupported(true)
+        const recognition = new SpeechRecognition()
+        recognition.continuous = continuous
+        recognition.interimResults = true
+        recognition.lang = speechLang
+        recognition.maxAlternatives = 3
+
+        recognition.onresult = (event) => {
+          let interim = ''
+          let final = ''
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i]
+            if (result.isFinal) {
+              final += result[0].transcript
+            } else {
+              interim += result[0].transcript
+            }
+          }
+          if (final) {
+            setTranscript(prev => (prev ? `${prev} ${final}` : final).trim())
+            setInterimTranscript('')
+            onResultRef.current?.(final)
           } else {
-            interim += result[0].transcript
+            setInterimTranscript(interim)
           }
         }
-        if (final) {
-          setTranscript(prev => prev ? `${prev} ${final}` : final)
-          setInterimTranscript('')
-          onResult?.(final)
-        } else {
-          setInterimTranscript(interim)
+
+        recognition.onerror = (event) => {
+          console.warn('Speech recognition event error:', event.error)
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            setError('microphone_blocked')
+          } else if (event.error === 'no-speech') {
+            // Silence ignored
+          } else if (event.error === 'network') {
+            setError('network_error')
+          } else {
+            setError(event.error)
+          }
+          setIsListening(false)
         }
-      }
 
-      recognition.onerror = (event) => {
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          setError('microphone_blocked')
-          setPermissionState('denied')
-        } else if (event.error === 'no-speech') {
-          // Noise/silence handling: graceful recovery
-          setError('no_speech')
-        } else if (event.error === 'network') {
-          setError('network_error')
-        } else {
-          setError(event.error)
+        recognition.onend = () => {
+          setIsListening(false)
         }
-        setIsListening(false)
-        stopAudioLevelAnalysis()
+
+        recognitionRef.current = recognition
+      } else {
+        setIsSupported(false)
       }
 
-      recognition.onend = () => {
-        setIsListening(false)
-        stopAudioLevelAnalysis()
+      return () => {
+        try {
+          recognitionRef.current?.abort()
+        } catch { /* ignore */ }
       }
-
-      recognitionRef.current = recognition
     }
-
-    return () => {
-      recognitionRef.current?.abort()
-      stopAudioLevelAnalysis()
-    }
-  }, [speechLang, continuous])
-
-  // Start Web Audio API Analyser for real-time microphone volume visualization
-  const startAudioLevelAnalysis = async () => {
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) return
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      setPermissionState('granted')
-
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-
-      const ctx = new AudioCtx()
-      audioContextRef.current = ctx
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 64
-      analyserRef.current = analyser
-
-      const source = ctx.createMediaStreamSource(stream)
-      source.connect(analyser)
-
-      const bufferLength = analyser.frequencyBinCount
-      const dataArray = new Uint8Array(bufferLength)
-
-      const updateLevel = () => {
-        if (!analyserRef.current) return
-        analyserRef.current.getByteFrequencyData(dataArray)
-        let sum = 0
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i]
-        }
-        const avg = sum / bufferLength
-        // Normalize roughly to 0-100
-        const level = Math.min(100, Math.round((avg / 128) * 100))
-        setAudioLevel(level)
-        animFrameRef.current = requestAnimationFrame(updateLevel)
-      }
-      updateLevel()
-    } catch (err) {
-      console.warn('Microphone audio analyser unavailable:', err)
-    }
-  }
-
-  const stopAudioLevelAnalysis = () => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current)
-      animFrameRef.current = null
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {})
-      audioContextRef.current = null
-    }
-    setAudioLevel(0)
-  }
+  }, [isNative, speechLang, continuous])
 
   const startListening = useCallback(async () => {
-    if (!recognitionRef.current) return
     setError(null)
     setTranscript('')
     setInterimTranscript('')
+    setRecordedAudioUrl(null)
+
+    // Optional audio snippet recorder for audio playback
     try {
-      await startAudioLevelAnalysis()
-      recognitionRef.current.start()
-      setIsListening(true)
-    } catch (e) {
-      // If already started, ignore
-      if (e.name !== 'InvalidStateError') {
-        console.warn('SpeechRecognition start error:', e)
+      const recorder = new AudioSnippetRecorder()
+      recorderRef.current = recorder
+      await recorder.start()
+    } catch (recErr) {
+      console.warn('Audio snippet recorder unavailable:', recErr)
+    }
+
+    if (isNative) {
+      try {
+        // 1. Verify/Request Android runtime permissions
+        const hasPerm = await CapSpeechRecognition.hasPermission()
+        if (!hasPerm?.permission) {
+          const req = await CapSpeechRecognition.requestPermissions()
+          if (!req?.permission) {
+            setError('microphone_blocked')
+            return
+          }
+        }
+
+        // 2. Start native speech recognition engine
+        await CapSpeechRecognition.start({
+          language: speechLang,
+          maxResults: 3,
+          prompt: 'ArogyaDarpan: Speak your symptoms',
+          partialResults: true,
+          popup: false,
+        })
+        setIsListening(true)
+      } catch (err) {
+        console.warn('Native SpeechRecognition start error:', err)
+        setError('recognition_failed')
+        setIsListening(false)
+      }
+    } else {
+      // Browser SpeechRecognition
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.lang = speechLang
+          recognitionRef.current.start()
+          setIsListening(true)
+        } catch (e) {
+          if (e.name !== 'InvalidStateError') {
+            console.warn('SpeechRecognition start error:', e)
+            setError('recognition_failed')
+          } else {
+            setIsListening(true)
+          }
+        }
+      } else {
+        setIsListening(true)
       }
     }
-  }, [])
+  }, [isNative, speechLang])
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
+  const stopListening = useCallback(async () => {
+    if (isNative) {
       try {
-        recognitionRef.current.stop()
-      } catch (e) { /* ignore */ }
+        await CapSpeechRecognition.stop()
+      } catch (err) {
+        console.warn('Native SpeechRecognition stop error:', err)
+      }
+
+      const pending = interimTranscriptRef.current
+      if (pending) {
+        setTranscript(prev => (prev ? `${prev} ${pending}` : pending).trim())
+        setInterimTranscript('')
+        onResultRef.current?.(pending)
+      }
+    } else {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop()
+        } catch { /* ignore */ }
+      }
     }
-    stopAudioLevelAnalysis()
+
+    if (recorderRef.current) {
+      try {
+        const audioData = await recorderRef.current.stop()
+        if (audioData?.url) {
+          setRecordedAudioUrl(audioData.url)
+        }
+      } catch (err) {
+        console.warn('Could not finalize audio snippet:', err)
+      }
+    }
+
     setIsListening(false)
-  }, [])
+  }, [isNative])
 
   const resetTranscript = useCallback(() => {
     setTranscript('')
     setInterimTranscript('')
     setError(null)
+    setRecordedAudioUrl(null)
   }, [])
 
   return {
@@ -195,8 +276,7 @@ export function useVoiceInput({ lang = 'en-IN', continuous = false, onResult } =
     interimTranscript,
     isSupported,
     error,
-    audioLevel,
-    permissionState,
+    recordedAudioUrl,
     speechLang,
     startListening,
     stopListening,

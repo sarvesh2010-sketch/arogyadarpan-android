@@ -1,18 +1,23 @@
 import { useNavigate } from 'react-router-dom'
+import { Stethoscope } from 'lucide-react'
 import ArogyaDarpanLogo from './ArogyaDarpanLogo'
 import LanguageSelector from './LanguageSelector'
 import { getActivePatient } from '../services/sessionStore'
+import { useLanguage } from '../context/LanguageContext'
 
 const STITCH_AVATAR_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDUwTVsok33NhN3uyVg_5gp51TupZxxTlKRj9Y84DbEVCaaZnURSBEjAYKp-kKzg6gYf31I_qP6meiSs0gi7CR3L9Wck8VisP_GhGxCpHwkNq8VUUp_aubu7-SeWCSFGWVD0Q2vHtDSqfIjtq0nSU5k4U6LDxR937bK2XNe6w43A_gd9gAyiIxT7WN_AGaEQnqMWtHxKdj4n54_2uuyxAmyrX7A2-ljU1b6A5KWEjPtV1CGf-BifjE2'
 
-export default function StitchAppHeader({ title = 'Clinical Intake', subtitle = '', showBack = false, onBack }) {
+export default function StitchAppHeader({ title = 'Clinical Intake', subtitle = '', showBack = false, onBack, maxWidth = 'max-w-5xl' }) {
   const navigate = useNavigate()
+  const { t, lang } = useLanguage()
   const patient = getActivePatient()
 
+  const displayTitle = t(title, title)
+
   return (
-    <header className="sticky top-0 w-full z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_8px_rgba(0,0,0,0.03)] select-none pt-safe">
-      <div className="max-w-2xl mx-auto h-14 sm:h-16 px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-3">
+    <header className="sticky top-0 w-full z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_8px_rgba(0,0,0,0.03)] select-none pt-safe overflow-x-hidden">
+      <div className={`${maxWidth} mx-auto h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-3 w-full`}>
         {/* Left branding & title */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {showBack ? (
@@ -29,24 +34,35 @@ export default function StitchAppHeader({ title = 'Clinical Intake', subtitle = 
             <ArogyaDarpanLogo size="sm" className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')} />
           )}
 
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-baseline gap-1.5 truncate">
-              <span className="font-heading text-xs sm:text-sm font-bold text-teal-800 tracking-tight">ArogyaDarpan</span>
-              <span className="text-[11px] text-slate-500 font-medium hidden xs:inline">आरोग्यदर्पण</span>
-            </div>
+          <div className="flex flex-col min-w-0 justify-center">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-slate-900 truncate" title={title}>
-                {title}
+              <span className="font-heading text-xs sm:text-sm font-bold text-teal-900 tracking-tight shrink-0">
+                ArogyaDarpan
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-700 text-[9px] font-mono font-bold flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-mono font-bold shrink-0">
                 ABDM
+              </span>
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate block leading-tight" title={displayTitle}>
+                {displayTitle}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right language switcher & avatar */}
+        {/* Right doctor portal, language switcher & avatar */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <button
+            onClick={() => navigate('/doctor/login')}
+            className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Doctor OPD Queue & Workbench"
+          >
+            <Stethoscope className="size-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">Doctor Portal</span>
+            <span className="sm:hidden">Doctor</span>
+          </button>
+
           <LanguageSelector variant="compact" />
           <div
             onClick={() => navigate('/patient/dashboard')}

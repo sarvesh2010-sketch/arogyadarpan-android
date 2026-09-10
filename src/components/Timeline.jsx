@@ -135,7 +135,7 @@ export default function Timeline({ events = [], className = '' }) {
       </section>
 
       {/* Horizontal Scrolling Category Pills */}
-      <div className="relative -mx-2 px-2 overflow-x-auto no-scrollbar">
+      <div className="relative w-full max-w-full overflow-x-auto no-scrollbar overscroll-contain touch-pan-x py-1">
         <div className="flex items-center gap-2 pb-1">
           <button
             type="button"

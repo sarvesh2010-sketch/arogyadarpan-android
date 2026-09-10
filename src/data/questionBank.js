@@ -4,6 +4,8 @@
 // Multilingual support across Indian languages
 // ============================
 
+import { generateFollowUpQuestions } from '../services/aiQuestionGenerator'
+
 export const COMPLAINT_OPTIONS = [
   {
     id: 'chest_pain',
@@ -939,53 +941,15 @@ export const COMMON_HISTORY_QUESTIONS = [
   },
 ]
 
-export function getQuestionSequence(complaintId) {
-  const socrates = SOCRATES_QUESTIONS[complaintId] || [
-    {
-      id: 'generic_onset',
-      question: 'When did your symptoms start?',
-      questionHi: 'आपके लक्षण कब शुरू हुए?',
-      questions: {
-        hi: 'आपके लक्षण कब शुरू हुए?',
-        bn: 'আপনার লক্ষণগুলি কখন শুরু হয়েছিল?',
-        ta: 'உங்கள் அறிகுறிகள் எப்போது தொடங்கின?',
-        te: 'మీ లక్షణాలు ఎప్పుడు ప్రారంభమయ్యాయి?',
-        mr: 'तुमची लक्षणे कधी सुरू झाली?',
-        gu: 'તમારા લક્ષણો ક્યારે શરૂ થયા?',
-        kn: 'ನಿಮ್ಮ ಲಕ್ಷಣಗಳು ಯಾವಾಗ ಪ್ರಾರಂಭವಾದವು?',
-        pa: 'ਤੁਹਾਡੇ ਲੱਛਣ ਕਦੋਂ ਸ਼ੁਰੂ ਹੋਏ?',
-        ml: 'ലക്ഷണങ്ങൾ എപ്പോഴാണ് തുടങ്ങിയത്?',
-      },
-      type: 'single_select',
-      options: [
-        { value: 'today', label: 'Today', labelHi: 'आज' },
-        { value: '1_day', label: 'Yesterday', labelHi: 'कल' },
-        { value: '2_3_days', label: '2-3 days ago', labelHi: '2-3 दिन पहले' },
-        { value: 'more', label: 'More than a week ago', labelHi: '1 सप्ताह से अधिक' }
-      ],
-      category: 'duration'
-    },
-    {
-      id: 'generic_severity',
-      question: 'On a scale of 1 to 10, how severe are your symptoms?',
-      questionHi: '1 से 10 के पैमाने पर आपके लक्षण कितने गंभीर हैं?',
-      questions: {
-        hi: '1 से 10 के पैमाने पर आपके लक्षण कितने गंभीर हैं?',
-        bn: '১ থেকে ১০ স্কেলে লক্ষণগুলি কতটা তীব্র?',
-        ta: '1 முதல் 10 வரையிலான அளவில் உங்கள் அறிகுறிகள் எவ்வளவு கடுமையானவை?',
-        te: '1 నుండి 10 స్కేలులో మీ లక్షణాలు ఎంత తీవ్రంగా ఉన్నాయి?',
-        mr: '१ ते १० च्या प्रमाणात लक्षणे किती तीव्र आहेत?',
-        gu: '૧ થી ૧૦ માં તમારા લક્ષણો કેટલા ગંભીર છે?',
-        kn: '1 ರಿಂದ 10 ರ ಪ್ರಮಾಣದಲ್ಲಿ ನಿಮ್ಮ ಲಕ್ಷಣಗಳು ಎಷ್ಟು ತೀವ್ರವಾಗಿವೆ?',
-        pa: '1 ਤੋਂ 10 ਦੇ ਪੈਮਾਨੇ ਤੇ ਲੱਛਣ ਕਿੰਨੇ ਗੰਭੀਰ ਹਨ?',
-        ml: '1 മുതൽ 10 വരെയുള്ള സ്കെയിലിൽ ലക്ഷണങ്ങൾ എത്രത്തോളം രൂക്ഷമാണ്?',
-      },
-      type: 'number',
-      min: 1,
-      max: 10,
-      category: 'severity'
-    },
-  ]
+export function getQuestionSequence(complaintId, customText = '', lang = 'en') {
+  let socrates = null
+
+  if (complaintId && complaintId !== 'other' && !customText && SOCRATES_QUESTIONS[complaintId]) {
+    socrates = SOCRATES_QUESTIONS[complaintId]
+  } else {
+    // Generate AI / Clinical ontology questions tailored specifically to the custom complaint
+    socrates = generateFollowUpQuestions(complaintId, customText, lang)
+  }
 
   return [
     {

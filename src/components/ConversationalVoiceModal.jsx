@@ -1,21 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Check, X, Sparkles, AlertCircle, Volume2 } from 'lucide-react'
-import Button from './Button'
-import Badge from './Badge'
-import { useVoiceInput } from '../hooks/useVoiceInput'
-import { parseConversationalIntake } from '../services/conversationalAiEngine'
+import {
+  Mic,
+  MicOff,
+  Check,
+  X,
+  Sparkles,
+  AlertCircle,
+  Volume2,
+  VolumeX,
+  Send,
+  RefreshCw,
+  Stethoscope,
+  Activity
+} from 'lucide-react'
+import { useVoiceInput, SPEECH_LOCALE_MAP } from '../hooks/useVoiceInput'
+import {
+  parseConversationalIntakeWithAI,
+  parseConversationalIntake,
+  MULTILINGUAL_GREETINGS
+} from '../services/conversationalAiEngine'
+import { SUMMARY_LANGUAGES } from '../services/llmSummaryService'
+import { speakText, stopSpeech } from '../services/audioService'
 
 export default function ConversationalVoiceModal({
   isOpen,
   onClose,
-  lang = 'en',
+  lang = 'hi',
   onApplyIntake,
 }) {
+  const [activeLang, setActiveLang] = useState(lang || 'hi')
   const [currentText, setCurrentText] = useState('')
+  const [manualInput, setManualInput] = useState('')
   const [parsedResult, setParsedResult] = useState(null)
   const [isAiSpeaking, setIsAiSpeaking] = useState(false)
+  const [isAiParsing, setIsAiParsing] = useState(false)
+  const [chatHistory, setChatHistory] = useState([])
+  const chatScrollRef = useRef(null)
 
+  const activeLangMeta = SUMMARY_LANGUAGES.find(l => l.id === activeLang) || SUMMARY_LANGUAGES[1]
+
+  // Voice input hook dynamically tied to activeLang
   const {
     isListening,
     transcript,
@@ -27,236 +52,399 @@ export default function ConversationalVoiceModal({
     stopListening,
     resetTranscript,
   } = useVoiceInput({
-    lang,
+    lang: activeLang,
     continuous: true,
-    onResult: (finalText) => {
+    onResult: async (finalText) => {
       const fullText = (currentText + ' ' + finalText).trim()
       setCurrentText(fullText)
+      await handleProcessInput(fullText)
     },
   })
 
-  // Parse conversational text whenever transcript updates
-  useEffect(() => {
-    const textToParse = (currentText + ' ' + interimTranscript).trim()
-    if (textToParse.length > 4) {
-      const parsed = parseConversationalIntake(textToParse, lang)
-      setParsedResult(parsed)
-    }
-  }, [currentText, interimTranscript, lang])
-
-  // Reset when opened
+  // Initialize or reset when modal opens or language changes
   useEffect(() => {
     if (isOpen) {
       setCurrentText('')
+      setManualInput('')
       setParsedResult(null)
       resetTranscript()
-      startListening()
+
+      const greeting = MULTILINGUAL_GREETINGS[activeLang] || MULTILINGUAL_GREETINGS.hi
+      setChatHistory([
+        {
+          sender: 'ai',
+          text: greeting,
+          time: 'Now',
+        }
+      ])
+
+      // Start listening after brief mount delay
+      const timer = setTimeout(() => {
+        startListening()
+      }, 400)
+
+      return () => clearTimeout(timer)
     } else {
       stopListening()
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+      stopSpeech()
+      setIsAiSpeaking(false)
     }
-  }, [isOpen])
+  }, [isOpen, activeLang])
 
-  // AI audio reply
-  const handleSpeakAiReply = () => {
-    if (!parsedResult?.conversationalReply || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(parsedResult.conversationalReply)
-    utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-IN'
-    utterance.rate = 0.95
-    utterance.onstart = () => setIsAiSpeaking(true)
-    utterance.onend = () => setIsAiSpeaking(false)
-    utterance.onerror = () => setIsAiSpeaking(false)
-    window.speechSynthesis.speak(utterance)
+  // Scroll chat to bottom on new messages
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    }
+  }, [chatHistory, interimTranscript])
+
+  // Process natural language input (from voice or typing)
+  const handleProcessInput = async (inputText) => {
+    const textToAnalyze = inputText.trim()
+    if (!textToAnalyze || textToAnalyze.length < 3) return
+
+    setIsAiParsing(true)
+
+    // Add user turn to chat if not already present
+    setChatHistory(prev => {
+      const last = prev[prev.length - 1]
+      if (last && last.sender === 'user' && last.text === textToAnalyze) return prev
+      return [...prev, { sender: 'user', text: textToAnalyze, time: 'Just now' }]
+    })
+
+    try {
+      // Parse with AI / NLP across all 10 languages
+      const parsed = await parseConversationalIntakeWithAI(textToAnalyze, activeLang)
+      setParsedResult(parsed)
+
+      if (parsed?.conversationalReply) {
+        setChatHistory(prev => [
+          ...prev,
+          { sender: 'ai', text: parsed.conversationalReply, time: 'Just now' }
+        ])
+
+        // Automatically speak AI reply
+        speakText(parsed.conversationalReply, {
+          lang: activeLangMeta.locale || 'hi-IN',
+          rate: 0.95,
+          onStart: () => setIsAiSpeaking(true),
+          onEnd: () => setIsAiSpeaking(false),
+          onError: () => setIsAiSpeaking(false),
+        })
+      }
+    } catch (err) {
+      console.warn('Parsing error:', err)
+      // Fallback
+      const fallbackParsed = parseConversationalIntake(textToAnalyze, activeLang)
+      setParsedResult(fallbackParsed)
+    } finally {
+      setIsAiParsing(false)
+    }
+  }
+
+  // Handle manual typed submit
+  const handleManualSubmit = async (e) => {
+    e?.preventDefault()
+    if (!manualInput.trim()) return
+    const text = (currentText ? currentText + '. ' : '') + manualInput.trim()
+    setCurrentText(text)
+    setManualInput('')
+    await handleProcessInput(text)
+  }
+
+  // Replay AI audio reply
+  const handleSpeakReply = () => {
+    if (isAiSpeaking) {
+      stopSpeech()
+      setIsAiSpeaking(false)
+      return
+    }
+
+    const reply = parsedResult?.conversationalReply || chatHistory[chatHistory.length - 1]?.text
+    if (!reply) return
+
+    speakText(reply, {
+      lang: activeLangMeta.locale || 'hi-IN',
+      rate: 0.95,
+      onStart: () => setIsAiSpeaking(true),
+      onEnd: () => setIsAiSpeaking(false),
+      onError: () => setIsAiSpeaking(false),
+    })
   }
 
   const handleApply = () => {
     if (parsedResult) {
       onApplyIntake?.(parsedResult)
     }
+    stopSpeech()
     onClose()
+  }
+
+  const handleResetConversation = () => {
+    stopSpeech()
+    stopListening()
+    setCurrentText('')
+    setManualInput('')
+    setParsedResult(null)
+    resetTranscript()
+    const greeting = MULTILINGUAL_GREETINGS[activeLang] || MULTILINGUAL_GREETINGS.hi
+    setChatHistory([
+      {
+        sender: 'ai',
+        text: greeting,
+        time: 'Now',
+      }
+    ])
+    startListening()
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in select-none">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="bg-surface-raised rounded-3xl border border-border-light shadow-2xl max-w-xl w-full p-6"
+        exit={{ opacity: 0, scale: 0.96, y: 15 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-3xl border border-teal-500/30 shadow-2xl max-w-xl w-full flex flex-col max-h-[92vh] overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 border-b border-border-light pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-md">
-              <Sparkles className="w-5 h-5" />
+        {/* Header with Title & Close */}
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 text-white flex items-center justify-between gap-3 border-b border-teal-700/50">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-200 shrink-0 shadow-xs">
+              <Sparkles className="size-5 text-teal-300 animate-pulse" />
             </div>
-            <div>
-              <h3 className="font-bold text-text-primary text-base font-heading">
-                {lang === 'hi' ? 'प्राकृतिक बातचीत (बोलकर बताएं)' : 'Conversational Voice AI Intake'}
+            <div className="min-w-0">
+              <h3 className="font-heading font-bold text-sm sm:text-base text-white tracking-tight truncate">
+                संवादी एआई इंटेक (Conversational AI Intake)
               </h3>
-              <p className="text-xs text-text-muted">
-                {lang === 'hi' ? 'हिंदी, अंग्रेजी या मिली-जुली भाषा में स्वाभाविक रूप से बोलें' : 'Speak naturally in Hindi, English, or mixed Hinglish'}
+              <p className="text-[11px] sm:text-xs text-teal-200/80 truncate mt-0.5">
+                Speak your symptoms naturally in any of 10 Indian languages
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-text-muted hover:text-text-primary rounded-lg cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm cursor-pointer transition shrink-0"
           >
-            <X className="w-5 h-5" />
+            ✕
           </button>
         </div>
 
-        {/* Microphone Pulse & Status */}
-        <div className="text-center py-5 bg-surface-muted rounded-2xl border border-border-light mb-4">
-          <div className="relative inline-flex items-center justify-center mb-3">
-            {/* Animated Pulsing Ring proportional to audioLevel */}
-            {isListening && (
-              <span
-                className="absolute w-20 h-20 rounded-full bg-primary-400/30 animate-ping"
-                style={{ transform: `scale(${1 + audioLevel / 60})` }}
-              />
-            )}
-            <button
-              type="button"
-              onClick={isListening ? stopListening : startListening}
-              className={`
-                relative w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer
-                ${isListening
-                  ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white ring-4 ring-rose-200'
-                  : 'bg-primary-500 text-white hover:bg-primary-600 ring-4 ring-primary-100'
-                }
-              `}
+        {/* Language Selection Chips (All 10 Languages) */}
+        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span className="text-[10px] font-bold text-slate-400 uppercase font-mono shrink-0">
+            भाषा:
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {SUMMARY_LANGUAGES.map(langMeta => (
+              <button
+                key={langMeta.id}
+                type="button"
+                onClick={() => {
+                  setActiveLang(langMeta.id)
+                }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap active:scale-95 ${
+                  activeLang === langMeta.id
+                    ? 'bg-teal-700 text-white shadow-xs ring-2 ring-teal-500/30'
+                    : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200/90'
+                }`}
+              >
+                {langMeta.native}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Conversational Dialogue Turns View */}
+        <div
+          ref={chatScrollRef}
+          className="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-[#f8fafc] to-white min-h-[180px] max-h-[300px]"
+        >
+          {chatHistory.map((msg, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {isListening ? <Mic className="w-8 h-8 animate-pulse" /> : <MicOff className="w-8 h-8" />}
-            </button>
-          </div>
-
-          <p className="font-bold text-text-primary text-sm mb-1">
-            {isListening
-              ? (lang === 'hi' ? 'सुन रहा हूँ... बोलिए' : 'Listening... Speak naturally')
-              : (lang === 'hi' ? 'माइक बंद है — शुरू करने के लिए टैप करें' : 'Microphone paused — tap to start')
-            }
-          </p>
-          <p className="text-xs text-text-muted italic px-4">
-            "{lang === 'hi' ? 'उदा: पेट में दर्द है और कल से उल्टी भी हो रही है' : 'e.g. Pet mein pain hai aur kal se vomiting bhi ho rahi hai'}"
-          </p>
-        </div>
-
-        {/* Live Speech Transcript */}
-        <div className="bg-surface-raised border border-border-light rounded-xl p-3.5 mb-4 max-h-24 overflow-y-auto">
-          <p className="text-xs font-bold text-text-muted uppercase mb-1">Live Transcript:</p>
-          <p className="text-sm text-text-primary leading-relaxed font-medium">
-            {currentText || interimTranscript ? (
-              <>
-                <span>{currentText}</span>
-                {interimTranscript && <span className="text-text-muted italic"> {interimTranscript}</span>}
-              </>
-            ) : (
-              <span className="text-text-muted italic">
-                {lang === 'hi' ? 'आप जो बोलेंगे वह यहाँ दिखाई देगा...' : 'Your spoken words will appear here in real time...'}
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* AI Extracted Clinical Entities */}
-        {parsedResult && (
-          <div className="space-y-2.5 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-text-secondary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary-600" />
-                {lang === 'hi' ? 'एआई द्वारा पहचानी गई जानकारी' : 'AI Extracted Clinical Facts'}
-              </span>
-              <Badge severity="success" size="sm">
-                Confidence: {Math.round((parsedResult.confidence || 0.9) * 100)}%
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {/* Primary Complaint */}
-              {parsedResult.primaryComplaint && (
-                <div className="bg-primary-50/80 border border-primary-200 p-2.5 rounded-xl">
-                  <span className="font-bold text-primary-900 block mb-0.5">Main Complaint:</span>
-                  <span className="text-primary-800 font-semibold">{parsedResult.primaryComplaint.label}</span>
-                </div>
-              )}
-
-              {/* Duration */}
-              {parsedResult.duration && (
-                <div className="bg-amber-50/80 border border-amber-200 p-2.5 rounded-xl">
-                  <span className="font-bold text-amber-900 block mb-0.5">Duration:</span>
-                  <span className="text-amber-800 font-semibold">{parsedResult.duration}</span>
-                </div>
-              )}
-
-              {/* Associated Symptoms */}
-              {parsedResult.associatedSymptoms?.length > 0 && (
-                <div className="col-span-2 bg-purple-50/80 border border-purple-200 p-2.5 rounded-xl">
-                  <span className="font-bold text-purple-900 block mb-0.5">Associated Symptoms:</span>
-                  <span className="text-purple-800 font-semibold">
-                    {parsedResult.associatedSymptoms.map(s => s.label).join(', ')}
+              <div
+                className={`max-w-[85%] p-3.5 rounded-2xl text-xs leading-relaxed ${
+                  msg.sender === 'user'
+                    ? 'bg-teal-700 text-white rounded-tr-xs shadow-xs font-medium'
+                    : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-xs shadow-2xs'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className={`font-mono text-[9px] font-bold uppercase tracking-wider ${msg.sender === 'user' ? 'text-teal-200' : 'text-teal-700'}`}>
+                    {msg.sender === 'user' ? 'You (Patient)' : `Arogya AI (${activeLangMeta.native})`}
                   </span>
+                  {msg.sender === 'ai' && (
+                    <button
+                      type="button"
+                      onClick={handleSpeakReply}
+                      className="p-1 rounded text-teal-700 hover:bg-teal-50 transition cursor-pointer"
+                      title="Listen aloud"
+                    >
+                      {isAiSpeaking ? <VolumeX className="size-3.5 text-teal-600 animate-pulse" /> : <Volume2 className="size-3.5" />}
+                    </button>
+                  )}
                 </div>
-              )}
-
-              {/* Extracted Diseases */}
-              {parsedResult.diseases?.length > 0 && (
-                <div className="col-span-2 bg-blue-50/80 border border-blue-200 p-2.5 rounded-xl">
-                  <span className="font-bold text-blue-900 block mb-0.5">Reported Condition:</span>
-                  <span className="text-blue-800 font-semibold">
-                    {parsedResult.diseases.map(d => `${d.disease} (ICD-10 ${d.icd10})`).join(', ')}
-                  </span>
-                </div>
-              )}
-
-              {/* Extracted Medications */}
-              {parsedResult.medications?.length > 0 && (
-                <div className="col-span-2 bg-emerald-50/80 border border-emerald-200 p-2.5 rounded-xl">
-                  <span className="font-bold text-emerald-900 block mb-0.5">Medication & Dose:</span>
-                  <span className="text-emerald-800 font-semibold">
-                    {parsedResult.medications.map(m => `${m.medication} ${m.dose} — ${m.frequency}`).join(', ')}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* AI Conversational Response */}
-            {parsedResult.conversationalReply && (
-              <div className="bg-surface-muted border border-border-light p-3 rounded-xl flex items-start justify-between gap-3 text-xs">
-                <p className="text-text-secondary leading-relaxed flex-1">
-                  🤖 <span className="font-semibold text-text-primary">AI:</span> {parsedResult.conversationalReply}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleSpeakAiReply}
-                  className="text-primary-600 hover:text-primary-800 font-semibold flex items-center gap-1 cursor-pointer flex-shrink-0"
-                >
-                  <Volume2 className="w-3.5 h-3.5" /> Speak
-                </button>
+                <p>{msg.text}</p>
               </div>
-            )}
-          </div>
+            </motion.div>
+          ))}
+
+          {/* Interim transcript indicator while user is currently talking */}
+          {isListening && interimTranscript && (
+            <div className="flex justify-end">
+              <div className="max-w-[80%] p-3 rounded-2xl bg-teal-50 text-teal-900 border border-teal-200 text-xs italic animate-pulse">
+                🎙️ {interimTranscript}...
+              </div>
+            </div>
+          )}
+
+          {/* AI Thinking indicator */}
+          {isAiParsing && (
+            <div className="flex justify-start">
+              <div className="p-3 rounded-2xl bg-slate-100 text-slate-600 text-xs flex items-center gap-2">
+                <Activity className="size-4 text-teal-600 animate-spin" />
+                <span>लक्षणों का विश्लेषण हो रहा है (Analyzing clinical entities)...</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Live Extracted Clinical Entities Card */}
+        {parsedResult && parsedResult.primaryComplaint && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-4 mb-3 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-heading font-bold text-emerald-950 flex items-center gap-1.5 text-xs">
+                <Check className="size-4 text-emerald-600 stroke-[3]" />
+                लक्षण पहचाने गए (Clinical Entities Detected)
+              </span>
+              <span className="font-mono text-[10px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-300">
+                Confidence: {Math.round(parsedResult.confidence * 100)}%
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="px-2 py-1 rounded-xl bg-white border border-emerald-300 font-bold text-slate-900">
+                मुख्य समस्या: <span className="text-teal-800">{parsedResult.primaryComplaint.label}</span>
+              </span>
+              {parsedResult.duration && (
+                <span className="px-2 py-1 rounded-xl bg-white border border-emerald-300 text-slate-800">
+                  अवधि: <span className="font-bold text-teal-800">{parsedResult.duration}</span>
+                </span>
+              )}
+              {parsedResult.severity && (
+                <span className="px-2 py-1 rounded-xl bg-white border border-emerald-300 text-slate-800">
+                  तीव्रता: <span className="font-bold text-teal-800">{parsedResult.severity}/10</span>
+                </span>
+              )}
+              {parsedResult.associatedSymptoms?.map((sym, i) => (
+                <span key={i} className="px-2 py-1 rounded-xl bg-white border border-emerald-300 text-slate-700">
+                  साथ में: <span className="font-semibold text-slate-900">{sym.label}</span>
+                </span>
+              ))}
+            </div>
+          </motion.div>
         )}
 
-        {/* Modal Actions */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-light">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Check}
-            disabled={!parsedResult?.primaryComplaint && !parsedResult?.duration && !parsedResult?.associatedSymptoms?.length}
-            onClick={handleApply}
-          >
-            {lang === 'hi' ? 'लागू करें और आगे बढ़ें' : 'Apply Answers & Continue'}
-          </Button>
+        {/* Microphone Controller & Wave Bar */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200/80 space-y-3">
+          <div className="flex items-center justify-center gap-4">
+            {/* Pulsing Mic Button */}
+            <div className="relative flex items-center justify-center">
+              {isListening && (
+                <span
+                  className="absolute w-16 h-16 rounded-full bg-teal-400/30 animate-ping"
+                  style={{ transform: `scale(${1 + (audioLevel || 20) / 60})` }}
+                />
+              )}
+              <button
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95 ${
+                  isListening
+                    ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white ring-4 ring-rose-200 animate-pulse'
+                    : 'bg-teal-700 hover:bg-teal-800 text-white ring-4 ring-teal-100'
+                }`}
+                title={isListening ? 'Click to stop listening' : 'Click to speak'}
+              >
+                {isListening ? <Mic className="size-6 text-white" /> : <MicOff className="size-6 text-white" />}
+              </button>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-900">
+                {isListening
+                  ? `${activeLangMeta.native} में बोलें (Listening in ${activeLangMeta.label})...`
+                  : 'माइक पर टैप करके बोलें (Tap mic to speak)'}
+              </span>
+              <span className="text-[11px] text-slate-500">
+                उदा. “सीने में तेज दर्द है और कल से चक्कर आ रहे हैं”
+              </span>
+            </div>
+
+            {currentText && (
+              <button
+                type="button"
+                onClick={handleResetConversation}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                title="Reset intake conversation"
+              >
+                <RefreshCw className="size-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Fallback Manual Typing Form */}
+          <form onSubmit={handleManualSubmit} className="relative flex items-center">
+            <input
+              type="text"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder={`या ${activeLangMeta.native} में लिखकर बताएं (Or type symptoms here)...`}
+              className="w-full pl-3.5 pr-20 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 shadow-2xs"
+            />
+            <button
+              type="submit"
+              disabled={!manualInput.trim()}
+              className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-30 disabled:pointer-events-none text-white text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
+            >
+              <span>भेजें</span>
+              <Send className="size-3" />
+            </button>
+          </form>
+
+          {/* Action Confirmation Footer */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 cursor-pointer transition"
+            >
+              रद्द करें (Cancel)
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={!parsedResult?.primaryComplaint}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Check className="size-4 stroke-[2.5]" />
+              <span>इंटेक में शामिल करें (Apply to Intake)</span>
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

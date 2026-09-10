@@ -14,11 +14,13 @@ import LanguageSelector from '../../components/LanguageSelector'
 import Timeline from '../../components/Timeline'
 import DocumentInspectorModal from '../../components/DocumentInspectorModal'
 import StitchAppHeader from '../../components/StitchAppHeader'
+import ConversationalVoiceModal from '../../components/ConversationalVoiceModal'
 import { useLanguage } from '../../context/LanguageContext'
 import {
   getActivePatient,
   getActiveDocuments,
   getActiveResponses,
+  saveActiveResponses,
   buildDynamicTimeline,
   clearPatientSession
 } from '../../services/sessionStore'
@@ -26,11 +28,12 @@ import { generateHPI } from '../../services/hpiEngine'
 
 export default function PatientDashboard() {
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { lang, t } = useLanguage()
 
   const [activeTab, setActiveTab] = useState('current') // 'current' | 'history' | 'documents' | 'records'
   const [activeInspectorDoc, setActiveInspectorDoc] = useState(null)
   const [docCategoryFilter, setDocCategoryFilter] = useState('all')
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
 
   const patient = useMemo(() => getActivePatient(), [])
   const documents = useMemo(() => getActiveDocuments(), [])
@@ -77,13 +80,13 @@ export default function PatientDashboard() {
   }, [responses, patient])
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 flex flex-col select-none pb-28 pb-safe">
+    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 flex flex-col select-none pb-28 pb-safe w-full max-w-full overflow-x-hidden">
       <StitchAppHeader title="स्वास्थ्य केंद्र (Patient Wellness Hub)" showBack onBack={() => navigate('/')} />
 
-      <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
         {/* Stitch Upcoming Consultation Hero Card */}
         <div className="p-5 rounded-3xl bg-white border border-teal-500/20 shadow-xs backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <div className="relative flex-shrink-0">
               <img
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDI_vnaonz1_3Nzdgz6hH7_03cwDYwEEpn8cLmuZa2dxh3Jkp0OnCq5e7o5uB4JRzoWIQKylgRbAw_KLNFgpe9_mDpmSjJ2S_lWN7GJSU5JeVGai4MFaLdNKtIuvcmWh3mR_T1lNUxZr2E_YRz6A6U7gYMoB8TlhFSLDMoiM75Iiev51tQcz2lYsQrtc4gzki9DTUDp6XLhszNCJ05i59NiNzQuH5aV9eQC__mFxevP1t2XE3X09Arm"
@@ -92,15 +95,15 @@ export default function PatientDashboard() {
               />
               <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <h3 className="font-heading font-bold text-base text-slate-900">Dr. Ananya Sharma</h3>
                 <span className="text-teal-600 font-bold text-xs bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
                   MD, Cardiology
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mt-0.5">Apex Health Center, Room 204 • Today, 11:30 AM</p>
-              <div className="flex items-center gap-2 mt-1.5">
+              <p className="text-xs text-slate-600 mt-0.5 truncate">Apex Health Center, Room 204 • Today, 11:30 AM</p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                   <Clock className="size-3" /> Token #A-14 (In Queue)
                 </span>
@@ -110,7 +113,7 @@ export default function PatientDashboard() {
 
           <button
             onClick={() => navigate('/patient/interview')}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-700 text-white font-heading font-bold text-xs shadow-teal-glow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-700 text-white font-heading font-bold text-xs shadow-teal-glow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             <Sparkles className="size-4" />
             <span>Continue Intake Interview</span>
@@ -118,50 +121,61 @@ export default function PatientDashboard() {
           </button>
         </div>
 
-        {/* Stitch 2x2 Quick Action Tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Stitch Quick Action Tiles */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
           <div
-            onClick={() => navigate('/patient/interview')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+            onClick={() => setShowVoiceModal(true)}
+            className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group min-w-0"
           >
             <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-700 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
               <span className="text-xl">🎙️</span>
             </div>
-            <p className="font-heading font-bold text-xs text-slate-900">Voice Intake</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Speak symptoms</p>
+            <p className="font-heading font-bold text-xs text-slate-900 truncate">Voice Intake</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Speak in 10 languages</p>
           </div>
 
           <div
             onClick={() => navigate('/patient/documents')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+            className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group min-w-0"
           >
             <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-700 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
               <span className="text-xl">📄</span>
             </div>
-            <p className="font-heading font-bold text-xs text-slate-900">Upload Records</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Scan prescription</p>
+            <p className="font-heading font-bold text-xs text-slate-900 truncate">Upload Records</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Scan prescription</p>
           </div>
 
           <div
             onClick={() => setActiveTab('timeline')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+            className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group min-w-0"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
               <span className="text-xl">⏳</span>
             </div>
-            <p className="font-heading font-bold text-xs text-slate-900">Medical Timeline</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Longitudinal view</p>
+            <p className="font-heading font-bold text-xs text-slate-900 truncate">Medical Timeline</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Longitudinal view</p>
           </div>
 
           <div
             onClick={() => setActiveTab('records')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+            className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 shadow-xs hover:shadow-sm transition-all cursor-pointer group min-w-0"
           >
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
               <span className="text-xl">💊</span>
             </div>
-            <p className="font-heading font-bold text-xs text-slate-900">Current Meds</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Track prescriptions</p>
+            <p className="font-heading font-bold text-xs text-slate-900 truncate">Current Meds</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Track prescriptions</p>
+          </div>
+
+          <div
+            onClick={() => navigate('/doctor/login')}
+            className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 hover:border-emerald-400 shadow-xs hover:shadow-sm transition-all cursor-pointer group min-w-0"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform shadow-xs">
+              <Stethoscope className="size-5" />
+            </div>
+            <p className="font-heading font-bold text-xs text-emerald-950 truncate">Doctor Portal</p>
+            <p className="text-[11px] text-emerald-700 mt-0.5 truncate">OPD queue & review</p>
           </div>
         </div>
 
@@ -215,7 +229,7 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Dashboard Tabs */}
-        <div className="flex gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto">
+        <div className="flex gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto w-full max-w-full no-scrollbar overscroll-contain touch-pan-x">
           {[
             { id: 'current', label: 'Current Consultation', icon: Stethoscope },
             { id: 'history', label: 'Previous Consultations', icon: Calendar },
@@ -322,37 +336,37 @@ export default function PatientDashboard() {
 
               {/* SOCRATES Framework Breakdown Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-surface-muted p-3.5 rounded-xl border border-border-light">
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Site:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.site}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.site}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Onset:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.onset}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.onset}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Character:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.character}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.character}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Radiation:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.radiation}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.radiation}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Associations:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.associations}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.associations}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Aggravating:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.aggravating}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.aggravating}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Relieving:</span>
-                  <span className="font-bold text-text-primary">{generatedHPI.structured.relieving}</span>
+                  <span className="font-bold text-text-primary break-words">{generatedHPI.structured.relieving}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-surface border border-border-light">
+                <div className="p-2 rounded-lg bg-surface border border-border-light min-w-0">
                   <span className="text-text-muted block text-[11px]">Severity:</span>
-                  <span className="font-bold text-rose-600">{generatedHPI.structured.severity}</span>
+                  <span className="font-bold text-rose-600 break-words">{generatedHPI.structured.severity}</span>
                 </div>
               </div>
 
@@ -555,6 +569,44 @@ export default function PatientDashboard() {
         isOpen={Boolean(activeInspectorDoc)}
         onClose={() => setActiveInspectorDoc(null)}
         documentData={activeInspectorDoc}
+      />
+
+      {/* Multilingual Conversational Voice AI Modal */}
+      <ConversationalVoiceModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        lang={lang}
+        onApplyIntake={(intakeData) => {
+          if (!intakeData) return
+          const newResponses = [...responses]
+          if (intakeData.primaryComplaint?.id) {
+            newResponses.push({
+              questionId: 'chief_complaint',
+              originalResponse: intakeData.rawTranscript,
+              structuredValue: intakeData.primaryComplaint.id,
+              source: 'voice'
+            })
+          }
+          if (intakeData.duration) {
+            newResponses.push({
+              questionId: 'socrates_onset',
+              originalResponse: intakeData.duration,
+              structuredValue: intakeData.duration,
+              source: 'voice'
+            })
+          }
+          if (intakeData.associatedSymptoms && intakeData.associatedSymptoms.length > 0) {
+            newResponses.push({
+              questionId: 'socrates_associations',
+              originalResponse: intakeData.associatedSymptoms.map(s => s.label).join(', '),
+              structuredValue: intakeData.associatedSymptoms.map(s => s.id),
+              source: 'voice'
+            })
+          }
+          saveActiveResponses(newResponses)
+          setShowVoiceModal(false)
+          navigate('/patient/interview')
+        }}
       />
     </div>
   )

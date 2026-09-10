@@ -1,18 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  CheckCircle2, ArrowRight, RefreshCw, QrCode, Clock, Sparkles
+  CheckCircle2, ArrowRight, RefreshCw, QrCode, Clock, Sparkles, Stethoscope
 } from 'lucide-react'
 import StitchAppHeader from '../../components/StitchAppHeader'
-import { clearPatientSession, getActivePatient } from '../../services/sessionStore'
+import { clearPatientSession, getActivePatient, updateRegisteredPatientField, getActiveResponses, getActiveDocuments } from '../../services/sessionStore'
 import { useLanguage } from '../../context/LanguageContext'
+import LLMSummaryGenerator from '../../components/LLMSummaryGenerator'
 
 export default function CompletionScreen() {
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { lang, t } = useLanguage()
   const patient = getActivePatient()
   const [showQrModal, setShowQrModal] = useState(false)
+
+  // Mark patient as ready_for_review on consultation completion
+  useEffect(() => {
+    if (patient && patient.patientId) {
+      updateRegisteredPatientField(patient.patientId, {
+        consultationStatus: 'ready_for_review',
+        completedAt: new Date().toISOString(),
+      })
+    }
+  }, [patient])
 
   const handleStartNew = () => {
     clearPatientSession()
@@ -88,18 +99,25 @@ export default function CompletionScreen() {
                 </div>
               </div>
 
-              {/* Doctor Meta Badge */}
+              {/* Doctor Meta Badge with direct review action */}
               <div className="mt-3 p-2.5 rounded-2xl bg-slate-50 flex items-center justify-between border border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-semibold border border-teal-200/60">
-                    <span className="material-symbols-outlined text-[20px]">stethoscope</span>
+                    <Stethoscope className="size-5 text-teal-700" />
                   </div>
                   <div>
                     <div className="font-heading font-bold text-xs text-slate-900 leading-tight">Dr. Ananya Sharma</div>
                     <div className="text-[11px] text-slate-500">Consultant Cardiologist • DM (Card)</div>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-teal-700 text-[18px]">verified_user</span>
+                <button
+                  onClick={() => navigate('/doctor/patient/' + (patient?.patientId || 'pt_00291'))}
+                  className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+                  title="Open Doctor Review Workbench"
+                >
+                  <span>Doctor Review</span>
+                  <ArrowRight className="size-3.5" />
+                </button>
               </div>
             </div>
 
@@ -217,6 +235,17 @@ export default function CompletionScreen() {
             </div>
           </div>
 
+          {/* Doctor's AI Clinical Summary Card (Collapsible) */}
+          <LLMSummaryGenerator
+            patient={patient}
+            responses={getActiveResponses()}
+            documents={getActiveDocuments()}
+            defaultLang={lang}
+            autoGenerate={false}
+            collapsible={true}
+            defaultExpanded={false}
+          />
+
           {/* ABDM Health Pass Export Action */}
           <button
             type="button"
@@ -227,18 +256,34 @@ export default function CompletionScreen() {
             <span>View & Save ABDM Health Pass (FHIR QR Code)</span>
           </button>
 
-          {/* Doctor Dashboard Presentation Shortcut */}
+          {/* Patient OPD Queue Guidance Banner */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-900 to-slate-900 text-white shadow-md flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold font-mono text-teal-300 tracking-wider uppercase">FOR JUDGES & DOCTOR REVIEW</p>
-              <p className="text-xs text-slate-300">Inspect Rahul Sharma in the Doctor Clinical Decision Station</p>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold font-mono text-teal-300 tracking-wider uppercase">OPD REGISTRATION COMPLETE</p>
+              <p className="text-xs text-slate-300">Your health intake has been safely delivered to the OPD doctor station.</p>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-semibold shrink-0">
+              Counter #4
+            </div>
+          </div>
+
+          {/* Doctor Portal Jump Banner */}
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold font-mono text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Stethoscope className="size-3.5 text-emerald-600" />
+                DOCTOR WORKBENCH ACCESS
+              </span>
+              <p className="text-xs text-slate-700 font-medium">
+                Log in as attending doctor to review this patient's clinical reports, OCR scans, and SOAP summary.
+              </p>
             </div>
             <button
               type="button"
-              onClick={() => navigate('/doctor')}
-              className="px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-white font-heading font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              onClick={() => navigate('/doctor/patient/' + (patient?.patientId || 'pt_00291'))}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:brightness-110 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-all"
             >
-              <span>Open Doctor Queue</span>
+              <span>Doctor Login & Review</span>
               <ArrowRight className="size-3.5" />
             </button>
           </div>

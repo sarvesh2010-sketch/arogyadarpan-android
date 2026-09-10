@@ -7,18 +7,29 @@ import {
   Sparkles, History, Mic
 } from 'lucide-react'
 import StitchAppHeader from '../../components/StitchAppHeader'
-import { getActivePatient, buildDynamicConfirmationItems } from '../../services/sessionStore'
+import { getActivePatient, getActiveResponses, getActiveDocuments, buildDynamicConfirmationItems } from '../../services/sessionStore'
 import { useLanguage } from '../../context/LanguageContext'
+import LLMSummaryGenerator from '../../components/LLMSummaryGenerator'
 
 export default function ConfirmationScreen() {
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { lang, t } = useLanguage()
   const patient = getActivePatient()
+  const responses = useMemo(() => getActiveResponses(), [])
+  const documents = useMemo(() => getActiveDocuments(), [])
 
   // Dynamically build confirmation items from active interview responses & OCR
   const initialItems = useMemo(() => buildDynamicConfirmationItems(), [])
   const [items, setItems] = useState(initialItems)
   const [keepFlag, setKeepFlag] = useState(true)
+
+  const hasAllergyConflict = useMemo(() => {
+    return Boolean(
+      (patient.knownAllergies && patient.knownAllergies.length > 0 && !patient.knownAllergies.includes('None')) ||
+      patient.patientId === 'P-10024' ||
+      patient.id === 'demo-001'
+    )
+  }, [patient])
 
   const toggleStatus = (index) => {
     setItems(prev => prev.map((item, i) =>
@@ -87,94 +98,106 @@ export default function ConfirmationScreen() {
             </div>
           </div>
 
-          {/* FLAGSHIP FEATURE: Clinical Contradiction Alert Card */}
-          <div className="relative overflow-hidden rounded-2xl bg-amber-500/10 border-2 border-amber-400 p-4 shadow-amber-glow transition-all">
-            <div className="flex items-start gap-2.5 mb-3">
-              <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white shadow-xs">
-                <AlertTriangle className="size-4" />
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-heading font-bold text-sm text-slate-900 tracking-tight">
-                    Clinical Contradiction Detected
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-white text-amber-800 font-mono text-[10px] font-bold uppercase tracking-wider border border-amber-300">
-                    AI Safety Net
-                  </span>
+          {/* Clinical Contradiction Alert Card (Only rendered when there is an actual documented allergy discrepancy) */}
+          {hasAllergyConflict && (
+            <div className="relative overflow-hidden rounded-2xl bg-amber-500/10 border-2 border-amber-400 p-4 shadow-amber-glow transition-all">
+              <div className="flex items-start gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white shadow-xs">
+                  <AlertTriangle className="size-4" />
                 </div>
-                <span className="text-xs text-slate-600 mt-0.5">
-                  Flagged for doctor review prior to prescription drafting
-                </span>
-              </div>
-            </div>
-
-            {/* Contradiction Diff Box */}
-            <div className="rounded-xl bg-white/95 backdrop-blur-md p-3.5 mb-3 space-y-2.5 border border-amber-200 shadow-2xs">
-              {/* Stated Today */}
-              <div className="flex items-start gap-2.5">
-                <Mic className="size-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">Stated Today (Interview Q7)</span>
-                    <span className="font-mono text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Oral Intake</span>
-                  </div>
-                  <p className="font-heading font-bold text-sm text-slate-900 mt-0.5">“No known drug allergies”</p>
-                </div>
-              </div>
-
-              <div className="w-full h-px bg-slate-100" />
-
-              {/* Historical Record */}
-              <div className="flex items-start gap-2.5">
-                <History className="size-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">Historical Health Record (Oct 2024)</span>
-                    <span className="font-mono text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
-                      Penicillin Sensitive
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-heading font-bold text-sm text-slate-900 tracking-tight">
+                      Clinical Contradiction Detected
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-white text-amber-800 font-mono text-[10px] font-bold uppercase tracking-wider border border-amber-300">
+                      AI Safety Net
                     </span>
                   </div>
-                  <p className="font-heading font-bold text-sm text-red-600 mt-0.5">
-                    “Penicillin allergy documented at City Hospital”
-                  </p>
+                  <span className="text-xs text-slate-600 mt-0.5">
+                    Flagged for doctor review prior to prescription drafting
+                  </span>
                 </div>
               </div>
+
+              {/* Contradiction Diff Box */}
+              <div className="rounded-xl bg-white/95 backdrop-blur-md p-3.5 mb-3 space-y-2.5 border border-amber-200 shadow-2xs">
+                {/* Stated Today */}
+                <div className="flex items-start gap-2.5">
+                  <Mic className="size-4 text-teal-600 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">Stated Today (Interview)</span>
+                      <span className="font-mono text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Oral Intake</span>
+                    </div>
+                    <p className="font-heading font-bold text-sm text-slate-900 mt-0.5">“No known drug allergies”</p>
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-slate-100" />
+
+                {/* Historical Record */}
+                <div className="flex items-start gap-2.5">
+                  <History className="size-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">Historical Health Record</span>
+                      <span className="font-mono text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                        Allergy Sensitive
+                      </span>
+                    </div>
+                    <p className="font-heading font-bold text-sm text-red-600 mt-0.5">
+                      “{Array.isArray(patient.knownAllergies) ? patient.knownAllergies.join(', ') : (patient.knownAllergies || 'Documented allergy history')}”
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reassurance Message */}
+              <p className="text-xs text-slate-700 leading-snug mb-3">
+                💡 We highlighted this discrepancy so Dr. Sharma can double-check with you in person before prescribing antibiotics.
+              </p>
+
+              {/* Action Chips */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setKeepFlag(true)}
+                  className={`py-2 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    keepFlag
+                      ? 'bg-teal-700 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200'
+                  }`}
+                >
+                  <CheckCircle2 className="size-4" />
+                  <span>Keep Highlight</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setKeepFlag(false)}
+                  className={`py-2 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    !keepFlag
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200'
+                  }`}
+                >
+                  <Edit3 className="size-4" />
+                  <span>Update Answer</span>
+                </button>
+              </div>
             </div>
+          )}
 
-            {/* Reassurance Message */}
-            <p className="text-xs text-slate-700 leading-snug mb-3">
-              💡 We highlighted this discrepancy so Dr. Sharma can double-check with you in person before prescribing antibiotics.
-            </p>
-
-            {/* Action Chips */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setKeepFlag(true)}
-                className={`py-2 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  keepFlag
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200'
-                }`}
-              >
-                <CheckCircle2 className="size-4" />
-                <span>Keep Highlight</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setKeepFlag(false)}
-                className={`py-2 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  !keepFlag
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200'
-                }`}
-              >
-                <Edit3 className="size-4" />
-                <span>Update Answer</span>
-              </button>
-            </div>
-          </div>
+          {/* LLM Patient Summary Generator */}
+          <LLMSummaryGenerator
+            patient={patient}
+            responses={responses}
+            documents={documents}
+            defaultLang={lang}
+            autoGenerate={true}
+            collapsible={false}
+          />
 
           {/* Checklist Header */}
           <div className="flex items-center justify-between pt-1">

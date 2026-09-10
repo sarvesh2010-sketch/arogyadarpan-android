@@ -109,11 +109,31 @@
   box-sizing: border-box;
 }
 
-html, body {
+html {
   margin: 0;
   padding: 0;
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  position: relative;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  position: relative;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -125,9 +145,46 @@ html, body {
 
 #root {
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
+  overflow-x: hidden !important;
+  position: relative;
+}
+
+/* Custom Scrollbar Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+
+/* Clinical Command Center Shadow & Border Tokens */
+.border-l-6 {
+  border-left-width: 6px !important;
+}
+
+.shadow-stat-red {
+  box-shadow: 0 4px 20px -2px rgba(239, 68, 68, 0.22), 0 2px 6px -1px rgba(239, 68, 68, 0.12) !important;
+}
+
+.shadow-stat-amber {
+  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.20), 0 2px 6px -1px rgba(245, 158, 11, 0.10) !important;
+}
+
+.shadow-stat-teal {
+  box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.18), 0 2px 6px -1px rgba(13, 148, 136, 0.08) !important;
+}
+
+.shadow-teal-glow {
+  box-shadow: 0 4px 14px 0 rgba(13, 148, 136, 0.35) !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -195,6 +252,29 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #e5e9ec; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #8f99a8; }
+
+/* No-Scrollbar utility for smooth horizontal chips & tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Clinical Triage Glows & Border Accents */
+.border-l-6 {
+  border-left-width: 6px !important;
+}
+.shadow-stat-red {
+  box-shadow: 0 4px 20px -2px rgba(239, 68, 68, 0.25);
+}
+.shadow-stat-amber {
+  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.2);
+}
+.shadow-stat-teal {
+  box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.2);
+}
 
 /* ============================================================
    BIONIC HEALTH NEXUS — Glassmorphic Design System & Telemetry

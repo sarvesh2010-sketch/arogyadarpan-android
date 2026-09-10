@@ -414,8 +414,8 @@ function KioskContent() {
               Timeline
             </Link>
             <span className="text-slate-300">•</span>
-            <Link to="/doctor" className="text-[10px] font-bold text-cobalt hover:underline">
-              Doctor Console
+            <Link to="/patient/dashboard" className="text-[10px] font-bold text-cobalt hover:underline">
+              Patient Portal
             </Link>
           </div>
         </div>

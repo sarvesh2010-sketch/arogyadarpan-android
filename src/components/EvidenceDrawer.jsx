@@ -18,7 +18,7 @@ export default function EvidenceDrawer({ isOpen, onClose, evidenceData, onVerify
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           className="absolute inset-y-0 right-0 max-w-full flex pl-10"
         >
-          <div className="w-screen max-w-md bg-surface-raised border-l border-border-light shadow-2xl flex flex-col justify-between">
+          <div className="w-full max-w-md bg-surface-raised border-l border-border-light shadow-2xl flex flex-col justify-between">
             {/* Drawer Header */}
             <div className="p-6 border-b border-border-light bg-surface-muted flex items-center justify-between">
               <div className="flex items-center gap-3">

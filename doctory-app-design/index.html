@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctory - UI/UX Design System & Screen Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'doctory-bg': '#ECEEF0',
+                        'doctory-black': '#111315',
+                        'doctory-lime': '#D2FA18',
+                        'doctory-cream': '#FEFDE8',
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0d0f12;
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+        .phone-frame {
+            width: 390px;
+            height: 844px;
+            border-radius: 52px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 12px #1c1f24, 0 0 0 14px #2b3038;
+            position: relative;
+            background: #ECEEF0;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .phone-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ECEEF0;
+        }
+        .dynamic-island {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 32px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 50;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+        }
+        .dynamic-island::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #0d2818;
+            border: 2px solid #041209;
+            border-radius: 50%;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111315;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2b3038;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D2FA18;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-[#131518]/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div class="w-10 h-10 rounded-2xl bg-doctory-lime flex items-center justify-center text-doctory-black font-extrabold text-xl shadow-lg shadow-doctory-lime/20">
+                D
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="text-lg font-bold tracking-tight text-white">Doctory</h1>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-doctory-lime/10 text-doctory-lime font-mono font-medium border border-doctory-lime/20">Stitch Project #7009928770188794604</span>
+                </div>
+                <p class="text-xs text-slate-400">Clinical Healthcare & Medical Appointment UI System</p>
+            </div>
+        </div>
+
+        <!-- View Controls & Tabs -->
+        <div class="flex items-center space-x-3">
+            <div class="bg-[#1c1f24] p-1 rounded-2xl flex items-center space-x-1 border border-white/5 text-xs font-medium">
+                <button id="btn-device" onclick="switchView('device')" class="px-4 py-2 rounded-xl bg-doctory-lime text-doctory-black font-semibold flex items-center space-x-1.5 transition">
+                    <span class="material-symbols-outlined text-[16px]">smartphone</span>
+                    <span>Interactive Device</span>
+                </button>
+                <button id="btn-grid" onclick="switchView('grid')" class="px-4 py-2 rounded-xl text-slate-300 hover:text-white flex items-center space-x-1.5 transition">
+                    <span class="material-symbols-outlined text-[16px]">view_column</span>
+                    <span>Journey Canvas (All 6)</span>
+                </button>
+            </div>
+
+            <a id="btn-open-screen" href="01_onboarding.html" target="_blank" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center space-x-1.5 transition">
+                <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                <span>Open Screen</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Screen Switcher Bar (Visible in Device Mode) -->
+    <div id="screen-tabs-bar" class="bg-[#16181d] border-b border-white/5 px-6 py-2.5 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2 overflow-x-auto py-1 scrollbar-none">
+            <span class="text-slate-400 font-medium mr-2">Screen Flow:</span>
+            
+            <button onclick="selectScreen(0)" class="screen-tab active px-3.5 py-1.5 rounded-full bg-white/10 text-white font-semibold flex items-center space-x-1.5 border border-white/15">
+                <span class="w-2 h-2 rounded-full bg-doctory-lime"></span>
+                <span>01. Onboarding</span>
+            </button>
+            <button onclick="selectScreen(1)" class="screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span>02. Home Dashboard</span>
+            </button>
+            <button onclick="selectScreen(2)" class="screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span>03. Select Doctor</span>
+            </button>
+            <button onclick="selectScreen(3)" class="screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span>04. Doctor Profile</span>
+            </button>
+            <button onclick="selectScreen(4)" class="screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span>05. Slot Booking</span>
+            </button>
+            <button onclick="selectScreen(5)" class="screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span>06. Digital Ticket</span>
+            </button>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-2 text-slate-400">
+            <span>Scale:</span>
+            <button onclick="setScale(0.85)" class="px-2 py-1 bg-white/5 rounded hover:text-white">85%</button>
+            <button onclick="setScale(1.0)" class="px-2 py-1 bg-white/5 rounded text-doctory-lime font-bold">100%</button>
+        </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 flex items-center justify-center p-8 relative overflow-auto">
+
+        <!-- DEVICE VIEW MODE -->
+        <div id="device-view" class="flex flex-col items-center justify-center transition-all duration-300">
+            <div id="device-wrapper" class="origin-top transition-transform duration-200">
+                <div class="phone-frame">
+                    <div class="dynamic-island"></div>
+                    <iframe id="main-iframe" src="01_onboarding.html" title="Screen Preview"></iframe>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex items-center space-x-4">
+                <button onclick="prevScreen()" class="p-2.5 rounded-full bg-[#1c1f24] text-slate-300 hover:text-white hover:bg-white/10 transition border border-white/5">
+                    <span class="material-symbols-outlined text-sm">arrow_back</span>
+                </button>
+                <div class="text-xs text-slate-400 font-mono">
+                    <span id="current-screen-index" class="text-white font-bold">1</span> of <span>6</span>
+                </div>
+                <button onclick="nextScreen()" class="p-2.5 rounded-full bg-[#1c1f24] text-slate-300 hover:text-white hover:bg-white/10 transition border border-white/5">
+                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- CANVAS GRID VIEW MODE (All 6 Screens) -->
+        <div id="grid-view" class="hidden w-full max-w-7xl mx-auto">
+            <div class="mb-8 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Full User Journey Progression</h2>
+                    <p class="text-sm text-slate-400">All 6 clinical app screens generated with Stitch design system tokens</p>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                    <span class="w-3 h-3 rounded-full bg-doctory-lime inline-block"></span>
+                    <span>#D2FA18 Neon Lime</span>
+                    <span class="w-3 h-3 rounded-full bg-doctory-black border border-white/20 inline-block ml-3"></span>
+                    <span>#111315 Obsidian</span>
+                    <span class="w-3 h-3 rounded-full bg-doctory-bg inline-block ml-3"></span>
+                    <span>#ECEEF0 Gray</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
+                
+                <!-- Card 1 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 01</span>
+                            <h3 class="text-sm font-bold text-white">Welcome / Onboarding</h3>
+                        </div>
+                        <a href="01_onboarding.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="01_onboarding.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 02</span>
+                            <h3 class="text-sm font-bold text-white">Home Discovery Dashboard</h3>
+                        </div>
+                        <a href="02_home_dashboard.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="02_home_dashboard.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 03</span>
+                            <h3 class="text-sm font-bold text-white">Select Preferable Doctor</h3>
+                        </div>
+                        <a href="03_select_doctor.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="03_select_doctor.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 04</span>
+                            <h3 class="text-sm font-bold text-white">Doctor Profile & Details</h3>
+                        </div>
+                        <a href="04_doctor_profile.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="04_doctor_profile.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+                <!-- Card 5 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 05</span>
+                            <h3 class="text-sm font-bold text-white">Appointment & Slot Picker</h3>
+                        </div>
+                        <a href="05_appointment_booking.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="05_appointment_booking.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+                <!-- Card 6 -->
+                <div class="bg-[#16181d] rounded-3xl p-5 border border-white/5 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xs font-mono text-doctory-lime font-semibold">SCREEN 06</span>
+                            <h3 class="text-sm font-bold text-white">Digital Ticket & Check-in Pass</h3>
+                        </div>
+                        <a href="06_digital_ticket.html" target="_blank" class="text-slate-400 hover:text-white">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                    </div>
+                    <div class="phone-frame scale-[0.65] origin-top mb-[-260px]">
+                        <div class="dynamic-island"></div>
+                        <iframe src="06_digital_ticket.html" loading="lazy"></iframe>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const screens = [
+            { file: "01_onboarding.html", name: "01. Onboarding" },
+            { file: "02_home_dashboard.html", name: "02. Home Dashboard" },
+            { file: "03_select_doctor.html", name: "03. Select Doctor" },
+            { file: "04_doctor_profile.html", name: "04. Doctor Profile" },
+            { file: "05_appointment_booking.html", name: "05. Slot Booking" },
+            { file: "06_digital_ticket.html", name: "06. Digital Ticket" }
+        ];
+
+        let currentIndex = 0;
+
+        function selectScreen(index) {
+            currentIndex = index;
+            const iframe = document.getElementById('main-iframe');
+            iframe.src = screens[currentIndex].file;
+
+            document.getElementById('btn-open-screen').href = screens[currentIndex].file;
+            document.getElementById('current-screen-index').innerText = (currentIndex + 1);
+
+            // update tabs
+            const tabs = document.querySelectorAll('.screen-tab');
+            tabs.forEach((tab, i) => {
+                const dot = tab.querySelector('span:first-child');
+                if (i === currentIndex) {
+                    tab.className = "screen-tab active px-3.5 py-1.5 rounded-full bg-white/10 text-white font-semibold flex items-center space-x-1.5 border border-white/15";
+                    dot.className = "w-2 h-2 rounded-full bg-doctory-lime";
+                } else {
+                    tab.className = "screen-tab px-3.5 py-1.5 rounded-full bg-transparent text-slate-400 hover:text-white font-medium flex items-center space-x-1.5";
+                    dot.className = "w-2 h-2 rounded-full bg-slate-600";
+                }
+            });
+        }
+
+        function prevScreen() {
+            let nextIdx = (currentIndex - 1 + screens.length) % screens.length;
+            selectScreen(nextIdx);
+        }
+
+        function nextScreen() {
+            let nextIdx = (currentIndex + 1) % screens.length;
+            selectScreen(nextIdx);
+        }
+
+        function switchView(mode) {
+            const deviceView = document.getElementById('device-view');
+            const gridView = document.getElementById('grid-view');
+            const tabsBar = document.getElementById('screen-tabs-bar');
+            const btnDevice = document.getElementById('btn-device');
+            const btnGrid = document.getElementById('btn-grid');
+
+            if (mode === 'device') {
+                deviceView.classList.remove('hidden');
+                gridView.classList.add('hidden');
+                tabsBar.classList.remove('hidden');
+                btnDevice.className = "px-4 py-2 rounded-xl bg-doctory-lime text-doctory-black font-semibold flex items-center space-x-1.5 transition";
+                btnGrid.className = "px-4 py-2 rounded-xl text-slate-300 hover:text-white flex items-center space-x-1.5 transition";
+            } else {
+                deviceView.classList.add('hidden');
+                gridView.classList.remove('hidden');
+                tabsBar.classList.add('hidden');
+                btnGrid.className = "px-4 py-2 rounded-xl bg-doctory-lime text-doctory-black font-semibold flex items-center space-x-1.5 transition";
+                btnDevice.className = "px-4 py-2 rounded-xl text-slate-300 hover:text-white flex items-center space-x-1.5 transition";
+            }
+        }
+
+        function setScale(scale) {
+            const wrapper = document.getElementById('device-wrapper');
+            wrapper.style.transform = `scale(${scale})`;
+        }
+    </script>
+</body>
+</html>

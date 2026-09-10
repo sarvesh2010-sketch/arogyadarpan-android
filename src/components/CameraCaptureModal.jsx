@@ -34,6 +34,16 @@ export default function CameraCaptureModal({
     }
   }, [isOpen, facingMode])
 
+  const streamRef = useRef(null)
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    setStream(null)
+  }
+
   const startCamera = async (mode) => {
     setIsInitializing(true)
     setCameraError(null)
@@ -42,25 +52,32 @@ export default function CameraCaptureModal({
     try {
       const constraints = {
         video: {
-          facingMode: mode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          facingMode: { ideal: mode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       }
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      streamRef.current = mediaStream
       setStream(mediaStream)
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(() => {})
+        }
       }
       setIsInitializing(false)
     } catch (err) {
       console.warn('Camera stream error, trying fallback:', err)
       try {
-        // Fallback to any available video track
         const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true })
+        streamRef.current = fallbackStream
         setStream(fallbackStream)
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch(() => {})
+          }
         }
         setIsInitializing(false)
       } catch (fallbackErr) {
@@ -68,13 +85,6 @@ export default function CameraCaptureModal({
         setCameraError('Unable to access camera. Please check camera permissions.')
         setIsInitializing(false)
       }
-    }
-  }
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
     }
   }
 
@@ -128,12 +138,12 @@ export default function CameraCaptureModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-x-hidden overflow-y-auto w-full max-w-[100vw]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-slate-900 rounded-2xl sm:rounded-3xl overflow-hidden max-w-xl w-full max-w-[calc(100vw-1.5rem)] border border-slate-700 shadow-2xl flex flex-col my-auto"
+          className="bg-slate-900 rounded-3xl overflow-hidden max-w-xl w-full border border-slate-700 shadow-2xl flex flex-col"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/90">

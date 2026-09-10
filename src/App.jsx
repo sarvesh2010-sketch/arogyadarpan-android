@@ -24,7 +24,8 @@ import ConfirmationScreen from './pages/patient/ConfirmationScreen'
 import CompletionScreen from './pages/patient/CompletionScreen'
 import PatientDashboard from './pages/patient/PatientDashboard'
 
-// Doctor Dashboard
+// Doctor Portal
+import DoctorLogin from './pages/doctor/DoctorLogin'
 import DoctorDashboard from './pages/doctor/DoctorDashboard'
 import PatientDetail from './pages/doctor/PatientDetail'
 
@@ -94,19 +95,11 @@ function AnimatedRoutes() {
           <Route path="/patient/complete" element={<CompletionScreen />} />
           <Route path="/patient/dashboard" element={<PatientDashboard />} />
 
-          {/* Doctor Dashboard */}
+          {/* Doctor Portal */}
+          <Route path="/doctor/login" element={<DoctorLogin />} />
           <Route path="/doctor" element={<DoctorDashboard />} />
-          <Route path="/doctor/patients" element={<Navigate to="/doctor" replace />} />
-          <Route path="/doctor/patient" element={<Navigate to="/doctor" replace />} />
-          {/* Support both singular /doctor/patient/:id and plural /doctor/patients/:id */}
           <Route path="/doctor/patient/:id" element={<PatientDetail />} />
-          <Route path="/doctor/patient/:id/timeline" element={<PatientDetail />} />
-          <Route path="/doctor/patient/:id/documents" element={<PatientDetail />} />
-          <Route path="/doctor/patient/:id/review" element={<PatientDetail />} />
-          <Route path="/doctor/patients/:id" element={<PatientDetail />} />
-          <Route path="/doctor/patients/:id/timeline" element={<PatientDetail />} />
-          <Route path="/doctor/patients/:id/documents" element={<PatientDetail />} />
-          <Route path="/doctor/patients/:id/review" element={<PatientDetail />} />
+          <Route path="/doctor/patient" element={<PatientDetail />} />
 
           {/* Catch-all Wildcard Route */}
           <Route path="*" element={<Navigate to="/" replace />} />

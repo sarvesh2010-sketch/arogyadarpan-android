@@ -3,7 +3,7 @@
 // Manages live patient session responses, OCR extractions, and timeline construction
 // ============================
 
-import { getDemoPatient } from '../data/demoPatients.js'
+import { DEMO_PATIENTS, getDemoPatient } from '../data/demoPatients.js'
 
 const CLINICAL_LABEL_MAP = {
   // Complaints
@@ -143,10 +143,45 @@ export function isAuthenticated() {
 }
 
 /**
+ * Start a brand new, isolated patient session.
+ * Crucial: Wipes previous session data (responses, documents, triage, interview state)
+ * so that details from a prior patient NEVER bleed into the new patient!
+ */
+export function startNewPatientSession(patientRecord) {
+  try {
+    clearPatientSession()
+    const patientId = patientRecord.patientId || generatePatientId()
+    const sessionPatient = {
+      ...patientRecord,
+      patientId,
+      isAuthenticated: true,
+      registeredAt: patientRecord.registeredAt || new Date().toISOString(),
+      consultationStatus: 'in_progress',
+    }
+    localStorage.setItem('arogya_patient', JSON.stringify(sessionPatient))
+    saveRegisteredPatient(sessionPatient)
+    return sessionPatient
+  } catch (e) {
+    console.warn('Start patient session error:', e)
+    return patientRecord
+  }
+}
+
+/**
  * Log in a patient and store active session credentials
  */
 export function loginPatient(patientRecord) {
   try {
+    // If switching to another patient, clear prior intake session data
+    const current = localStorage.getItem('arogya_patient')
+    if (current) {
+      try {
+        const parsed = JSON.parse(current)
+        if (parsed.patientId && parsed.patientId !== patientRecord.patientId) {
+          clearPatientSession()
+        }
+      } catch { /* ignore */ }
+    }
     const sessionPatient = {
       ...patientRecord,
       isAuthenticated: true,
@@ -430,12 +465,315 @@ export function clearPatientSession() {
 }
 
 /**
+ * Update a specific field for a registered patient in the registry
+ */
+export function updateRegisteredPatientField(patientId, fields) {
+  if (!patientId) return
+  try {
+    const list = getRegisteredPatients()
+    const idx = list.findIndex(p => p.patientId === patientId)
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...fields }
+      localStorage.setItem('arogya_registered_patients', JSON.stringify(list))
+    }
+  } catch (e) {
+    console.warn('Failed to update patient field:', e)
+  }
+}
+
+/**
+ * Save active responses partitioned per patient and globally
+ */
+export function saveActiveResponses(responses, patientId) {
+  try {
+    localStorage.setItem('arogya_responses', JSON.stringify(responses))
+    const currentPatient = getActivePatient()
+    const id = patientId || currentPatient?.patientId
+    if (id) {
+      localStorage.setItem(`arogya_patient_${id}_responses`, JSON.stringify(responses))
+      const chiefComplaintResp = responses.find(r => r.questionId === 'chief_complaint')
+      const complaintVal = chiefComplaintResp?.structuredValue || chiefComplaintResp?.originalResponse
+      updateRegisteredPatientField(id, {
+        chiefComplaint: complaintVal || currentPatient.chiefComplaint,
+        hasCompletedInterview: true,
+        consultationStatus: 'ready_for_review',
+        updatedAt: new Date().toISOString(),
+      })
+    }
+  } catch (e) {
+    console.warn('Save responses error:', e)
+  }
+}
+
+/**
+ * Save active documents partitioned per patient and globally
+ */
+export function saveActiveDocuments(documents, patientId) {
+  try {
+    localStorage.setItem('arogya_documents', JSON.stringify(documents))
+    const currentPatient = getActivePatient()
+    const id = patientId || currentPatient?.patientId
+    if (id) {
+      localStorage.setItem(`arogya_patient_${id}_documents`, JSON.stringify(documents))
+      updateRegisteredPatientField(id, {
+        documentsCount: documents.length,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+  } catch (e) {
+    console.warn('Save documents error:', e)
+  }
+}
+
+const HINDI_COMPLAINT_PREVIEWS = {
+  'demo-001': 'सीने में भारीपन व तेज़ दर्द (3 दिन से)',
+  'demo-002': 'तेज़ बुखार और लगातार सूखी खांसी',
+  'demo-003': 'पेट में ऐंठन, मरोड़ और उल्टी की शिकायत',
+  'demo-004': 'त्वचा पर लाल चकत्ते और खुजली',
+  'chest_pain': 'सीने में तेज़ दर्द और भारी दबाव',
+  'fever': 'तेज़ बुखार और ठंड लगना',
+  'cough': 'लगातार खांसी और कफ',
+  'stomach_pain': 'पेट में गंभीर ऐंठन व दर्द',
+  'headache': 'गंभीर सिरदर्द और भारीपन',
+  'breathing': 'सांस लेने में तकलीफ़ व घबराहट',
+}
+
+export function getHindiComplaintPreview(patientId, complaint) {
+  if (patientId && HINDI_COMPLAINT_PREVIEWS[patientId]) {
+    return HINDI_COMPLAINT_PREVIEWS[patientId]
+  }
+  const str = String(complaint || '').toLowerCase()
+  for (const [key, val] of Object.entries(HINDI_COMPLAINT_PREVIEWS)) {
+    if (str.includes(key) || str.includes(key.replace('_', ' '))) {
+      return val
+    }
+  }
+  if (str.includes('chest') || str.includes('heart')) return HINDI_COMPLAINT_PREVIEWS['chest_pain']
+  if (str.includes('fever') || str.includes('temp')) return HINDI_COMPLAINT_PREVIEWS['fever']
+  if (str.includes('cough')) return HINDI_COMPLAINT_PREVIEWS['cough']
+  if (str.includes('stomach') || str.includes('abdom')) return HINDI_COMPLAINT_PREVIEWS['stomach_pain']
+  if (str.includes('breath') || str.includes('dyspn')) return HINDI_COMPLAINT_PREVIEWS['breathing']
+  if (str.includes('head')) return HINDI_COMPLAINT_PREVIEWS['headache']
+  return 'सामान्य नैदानिक परामर्श (Clinical Review)'
+}
+
+/**
+ * Retrieve all patients for the Doctor Dashboard:
+ * Combines newly registered live kiosk patients with demo patients,
+ * dynamically generating consultation status, triage priority, symptoms, vitals, summary, and documents.
+ */
+export function getAllDoctorPatients() {
+  const registered = getRegisteredPatients()
+  const currentActive = getActivePatient()
+  const activeResponses = getActiveResponses()
+  const activeDocs = getActiveDocuments()
+
+  const formattedRegistered = registered.map(p => {
+    const isCurrent = currentActive && (currentActive.patientId === p.patientId || currentActive.phone === p.phone)
+    
+    // Retrieve responses for this patient
+    let responses = isCurrent && activeResponses.length > 0 ? activeResponses : []
+    if (responses.length === 0) {
+      try {
+        const stored = localStorage.getItem(`arogya_patient_${p.patientId}_responses`)
+        if (stored) responses = JSON.parse(stored)
+      } catch { /* ignore */ }
+    }
+
+    // Retrieve documents for this patient
+    let docs = isCurrent && activeDocs.length > 0 ? activeDocs : []
+    if (docs.length === 0) {
+      try {
+        const stored = localStorage.getItem(`arogya_patient_${p.patientId}_documents`)
+        if (stored) docs = JSON.parse(stored)
+      } catch { /* ignore */ }
+    }
+
+    // Retrieve triage for this patient
+    let triage = null
+    try {
+      if (isCurrent) {
+        const storedTriage = localStorage.getItem('arogya_triage')
+        if (storedTriage) triage = JSON.parse(storedTriage)
+      }
+    } catch { /* ignore */ }
+
+    // Derive chief complaint text
+    const chiefComplaintResp = responses.find(r => r.questionId === 'chief_complaint')
+    const rawComplaint = chiefComplaintResp?.structuredValue || chiefComplaintResp?.originalResponse || p.chiefComplaint || 'Clinical Consultation'
+    const complaintText = formatClinicalValue(rawComplaint)
+
+    // Derive triage severity
+    const triageCategory = triage?.category || (responses.some(r => r.questionId?.includes('severity') && parseInt(r.structuredValue) >= 7) ? 'urgent' : 'routine')
+    const isUrgent = triageCategory === 'emergency' || triageCategory === 'urgent'
+
+    // Formulate clinical signals
+    const clinicalSignals = []
+    if (isUrgent) {
+      clinicalSignals.push({
+        severity: triageCategory === 'emergency' ? 'critical' : 'high',
+        message: 'High Priority Triage Trigger',
+        detail: `Patient reported elevated severity for ${complaintText}`,
+        source: 'triage',
+        status: 'active'
+      })
+    }
+    if (p.knownAllergies && p.knownAllergies.length > 0) {
+      clinicalSignals.push({
+        severity: 'medium',
+        message: `Known Allergy: ${Array.isArray(p.knownAllergies) ? p.knownAllergies.join(', ') : p.knownAllergies}`,
+        detail: 'Documented during patient intake/registration.',
+        source: 'registration',
+        status: 'active'
+      })
+    }
+
+    // Determine consultation status
+    const status = p.consultationStatus || (responses.length > 0 ? 'ready_for_review' : 'in_progress')
+
+    // Formulate realistic vitals based on complaint & priority
+    const vitals = isUrgent
+      ? { bp: '144/92', hr: '96 bpm', spo2: '96%', temp: '98.8°F', pain: '7/10', status: 'elevated' }
+      : { bp: '122/80', hr: '76 bpm', spo2: '99%', temp: '98.4°F', pain: '2/10', status: 'normal' }
+
+    const triageInfo = {
+      level: isUrgent ? 2 : 3,
+      label: isUrgent ? 'ESI Level 2 — Emergent' : 'ESI Level 3 — Urgent',
+      category: isUrgent ? 'emergency' : 'routine',
+      badgeColor: isUrgent ? 'rose' : 'teal',
+    }
+
+    const hindiPreview = getHindiComplaintPreview(p.patientId, rawComplaint)
+
+    return {
+      id: p.patientId,
+      patientId: p.patientId,
+      name: p.name,
+      age: parseInt(p.age) || 35,
+      gender: p.gender || 'Other',
+      phone: p.phone || '9876543210',
+      abhaId: p.abhaId || `ABHA-${p.patientId}`,
+      language: p.language || 'en',
+      createdAt: p.registeredAt || p.updatedAt || new Date().toISOString(),
+      queueToken: p.queueToken || `#A-${String(10 + registered.indexOf(p)).padStart(2, '0')}`,
+      chiefComplaint: complaintText,
+      hindiComplaint: hindiPreview,
+      consultationStatus: status,
+      documentsCount: docs.length,
+      vitals,
+      triage: triageInfo,
+      isPriority: isUrgent,
+      registeredAtFormatted: p.registeredAt ? new Date(p.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '11:15 AM',
+      waitingTimeMinutes: 12,
+      consultation: {
+        id: `consult-${p.patientId}`,
+        department: 'General Medicine',
+        chiefComplaint: rawComplaint,
+        chiefComplaintText: `${complaintText} (${p.gender}, ${p.age} yrs)`,
+        status,
+        language: p.language || 'hi',
+        consentGiven: true,
+        startedAt: p.registeredAt || new Date().toISOString(),
+        completedAt: status === 'ready_for_review' ? new Date().toISOString() : null,
+      },
+      clinicalSignals,
+      summary: {
+        chiefComplaint: `${complaintText}`,
+        hpi: `A ${p.age}-year-old ${p.gender} presents with ${complaintText}. Patient ID: ${p.patientId}. Contact: ${p.phone}.`,
+        pastHistory: (p.pastMedicalHistory || []).map(m => ({
+          condition: m,
+          since: 'Documented',
+          source: 'intake',
+          verified: true
+        })),
+        medications: docs.flatMap(d => d.extraction?.extractedData?.medications || []).concat(
+          responses.find(r => r.questionId === 'current_medications')?.structuredValue
+            ? [{ name: String(responses.find(r => r.questionId === 'current_medications').structuredValue), frequency: 'Regular dose', source: 'interview', confidence: 0.95, verified: true }]
+            : []
+        ),
+        allergies: {
+          status: p.knownAllergies ? 'known' : 'unknown',
+          currentResponse: Array.isArray(p.knownAllergies) ? p.knownAllergies.join(', ') : (p.knownAllergies || 'None reported'),
+          needsReview: false
+        },
+        investigations: docs.flatMap(d => d.extraction?.extractedData?.investigations || []),
+        familyHistory: responses.find(r => r.questionId === 'family_history')?.structuredValue || 'Not reported',
+        personalHistory: {},
+        generatedAt: new Date().toISOString(),
+        verificationStatus: status,
+      },
+      timeline: buildDynamicTimeline(p, responses, docs),
+      documents: docs,
+      interviewResponses: responses,
+    }
+  })
+
+  // Merge registered patients with DEMO_PATIENTS (registered patients first), normalizing demo patients
+  const registeredIds = new Set(formattedRegistered.map(p => p.id))
+  const remainingDemo = DEMO_PATIENTS.filter(p => !registeredIds.has(p.id)).map((p, idx) => {
+    const rawComplaint = p.consultation?.chiefComplaintText || p.summary?.chiefComplaint || formatClinicalValue(p.consultation?.chiefComplaint) || 'Clinical Consultation'
+    const docs = p.documents || []
+    const signals = p.clinicalSignals || []
+    const isPriority = signals.some(s => s.severity === 'critical' || s.severity === 'high') ||
+      p.triage?.category === 'emergency' ||
+      p.triage?.category === 'urgent' ||
+      p.id === 'demo-001'
+
+    const vitals = p.vitals || (
+      p.id === 'demo-001'
+        ? { bp: '138/88', hr: '88 bpm', spo2: '97%', temp: '98.6°F', pain: '7/10', status: 'elevated' }
+        : p.id === 'demo-002'
+        ? { bp: '118/76', hr: '84 bpm', spo2: '99%', temp: '101.2°F', pain: '4/10', status: 'febrile' }
+        : { bp: '124/80', hr: '74 bpm', spo2: '99%', temp: '98.4°F', pain: '2/10', status: 'normal' }
+    )
+
+    const triage = p.triage || (
+      isPriority
+        ? { level: 2, label: 'ESI Level 2 — Emergent', category: 'emergency', badgeColor: 'rose' }
+        : p.id === 'demo-002'
+        ? { level: 3, label: 'ESI Level 3 — Urgent', category: 'urgent', badgeColor: 'amber' }
+        : { level: 4, label: 'ESI Level 4 — Routine', category: 'routine', badgeColor: 'teal' }
+    )
+
+    const consultationStatus = p.consultation?.status || 'ready_for_review'
+
+    return {
+      ...p,
+      patientId: p.id,
+      queueToken: p.queueToken || `#A-${String(14 + idx).padStart(2, '0')}`,
+      chiefComplaint: rawComplaint,
+      hindiComplaint: getHindiComplaintPreview(p.id, rawComplaint),
+      consultationStatus,
+      documentsCount: docs.length,
+      vitals,
+      triage,
+      isPriority,
+      registeredAtFormatted: `10:${30 + idx * 15} AM`,
+      waitingTimeMinutes: 14 + idx * 8,
+    }
+  })
+
+  return [...formattedRegistered, ...remainingDemo]
+}
+
+/**
+ * Retrieve patient by ID for PatientDetail screen
+ */
+export function getPatientById(id) {
+  if (!id) return getDemoPatient('demo-001')
+  const all = getAllDoctorPatients()
+  const match = all.find(p => p.id === id || p.patientId === id)
+  if (match) return match
+  return getDemoPatient(id) || getDemoPatient('demo-001')
+}
+
+/**
  * Dynamically construct medical timeline events for ANY patient session
  */
-export function buildDynamicTimeline() {
-  const patient = getActivePatient()
-  const responses = getActiveResponses()
-  const documents = getActiveDocuments()
+export function buildDynamicTimeline(customPatient, customResponses, customDocs) {
+  const patient = customPatient || getActivePatient()
+  const responses = customResponses || getActiveResponses()
+  const documents = customDocs || getActiveDocuments()
 
   const timeline = []
   const currentYear = new Date().getFullYear()

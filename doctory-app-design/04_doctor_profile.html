@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Doctor Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary": "#ffffff",
+            "inverse-surface": "#2e3133",
+            "inverse-primary": "#c6c6c9",
+            "tertiary": "#000000",
+            "on-tertiary-fixed-variant": "#454747",
+            "secondary-fixed-dim": "#b1d400",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary": "#ffffff",
+            "primary": "#000000",
+            "background": "#f8f9fb",
+            "surface-container-low": "#f2f4f6",
+            "primary-fixed": "#e2e2e5",
+            "surface-container": "#eceef0",
+            "outline-variant": "#c5c6ca",
+            "on-surface-variant": "#45474a",
+            "outline": "#75777a",
+            "on-surface": "#191c1e",
+            "primary-container": "#1a1c1e",
+            "error": "#ba1a1a",
+            "on-secondary-container": "#576a00",
+            "on-secondary-fixed-variant": "#3e4c00",
+            "surface-bright": "#f8f9fb",
+            "surface-variant": "#e1e3e5",
+            "error-container": "#ffdad6",
+            "on-secondary-fixed": "#171e00",
+            "surface-dim": "#d8dadc",
+            "on-background": "#191c1e",
+            "tertiary-fixed": "#e2e2e2",
+            "tertiary-container": "#1a1c1c",
+            "on-tertiary-container": "#838484",
+            "inverse-on-surface": "#eff1f3",
+            "surface-tint": "#5d5e61",
+            "surface": "#f8f9fb",
+            "on-tertiary-fixed": "#1a1c1c",
+            "on-primary-container": "#838486",
+            "on-error-container": "#93000a",
+            "surface-container-highest": "#e1e3e5",
+            "surface-container-high": "#e6e8ea",
+            "secondary-container": "#c8ef00",
+            "primary-fixed-dim": "#c6c6c9",
+            "on-primary-fixed-variant": "#454749",
+            "on-primary": "#ffffff",
+            "tertiary-fixed-dim": "#c6c6c7",
+            "on-primary-fixed": "#1a1c1e",
+            "on-error": "#ffffff",
+            "secondary-fixed": "#cbf203",
+            "secondary": "#546500"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "container-margin-mobile": "20px",
+            "unit": "8px",
+            "section-gap": "48px",
+            "gutter": "16px",
+            "container-margin-desktop": "64px"
+          },
+          "fontFamily": {
+            "headline-md": ["Plus Jakarta Sans"],
+            "headline-lg": ["Plus Jakarta Sans"],
+            "caption": ["Plus Jakarta Sans"],
+            "headline-lg-mobile": ["Plus Jakarta Sans"],
+            "body-md": ["Plus Jakarta Sans"],
+            "label-md": ["Plus Jakarta Sans"],
+            "body-lg": ["Plus Jakarta Sans"],
+            "display": ["Plus Jakarta Sans"]
+          },
+          "fontSize": {
+            "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "700" }],
+            "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "500" }],
+            "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+            "label-md": ["14px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "600" }],
+            "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "500" }],
+            "display": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .clay-card {
+      box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.7), 4px 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .clay-button {
+      box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.2), inset -2px -2px 4px rgba(0, 0, 0, 0.5);
+    }
+    .flat-hybrid {
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body class="bg-surface-container font-body-md text-on-surface antialiased min-h-screen flex flex-col relative pb-[100px]">
+<!-- Top App Bar from Shared Components -->
+<header class="w-full top-0 px-container-margin-mobile border-b border-outline-variant/30 flat no shadows flex justify-between items-center h-16 max-w-7xl mx-auto bg-background dark:bg-on-background z-10 sticky md:hidden">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md tracking-tighter text-on-background dark:text-surface-bright uppercase tracking-[0.2em] font-display">DOCTORY</h1>
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-variation-settings: 'FILL' 0;">bookmark_border</span>
+</button>
+</header>
+<!-- Desktop Header -->
+<header class="hidden md:flex w-full top-0 px-container-margin-desktop border-b border-outline-variant/30 flat no shadows justify-between items-center h-20 max-w-7xl mx-auto bg-background dark:bg-on-background z-10 sticky">
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md tracking-tighter text-on-background dark:text-surface-bright uppercase tracking-[0.2em] font-display">DOCTORY</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-variation-settings: 'FILL' 0;">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex-1 w-full max-w-7xl mx-auto px-container-margin-mobile md:px-container-margin-desktop pt-6 pb-24 flex flex-col gap-6 md:grid md:grid-cols-12 md:gap-8">
+<!-- Hero Profile Card -->
+<section class="md:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-[28px] p-[24px] clay-card flex flex-col items-center text-center relative shadow-[0_48px_100px_rgba(0,0,0,0.06)]">
+<div class="relative mb-4">
+<div class="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-surface-container-lowest shadow-sm z-10 relative">
+<img alt="Dr. Archie Parker" class="w-full h-full object-cover" data-alt="A professional headshot of Dr. Archie Parker, a distinguished male doctor with graying hair and a neatly trimmed beard. He is wearing a white lab coat over a light blue shirt and dark tie, with a stethoscope draped around his neck. The lighting is soft and high-key, creating a modern, clinical, light-mode aesthetic with a crisp, approachable feel." src="https://lh3.googleusercontent.com/aida/AEtjO1Xv0Q_6Dcy40IQn_mFW_cAB2WwhFZc0OQAmS3QLc4Ly-PnYXcJhc59ga4nIcc2WaSo1i6V6ysFB9jbal8CDsgopmkBJ5AYKL_FHohRX4AGosIIDmXfsgy9kTC_cpNTRjtRXB0YnNhYJIt5VUi2iP8lX7vSV4BzzMBbwDC2HRoo820AHcJpwm_Fy7qnZcRrrY4JjUa_04TUnS9c32Jpo3wwXBQBvbLGr2xTA7OyyEOdN95iEIbc6t0Mo1Q"/>
+</div>
+<div class="absolute bottom-2 right-2 w-6 h-6 bg-secondary-fixed rounded-full border-4 border-surface-container-lowest z-20"></div>
+<div class="absolute -top-2 -right-2 w-8 h-8 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-sm z-20">
+<span class="material-symbols-outlined text-secondary font-bold text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<h2 class="font-headline-md text-headline-md text-primary mb-1">Dr. Archie Parker</h2>
+<p class="font-body-md text-body-md text-outline mb-4">Medicine Specialist • Senior Physician</p>
+<div class="bg-secondary-fixed text-primary px-4 py-2 rounded-full font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+          4.9 (140+ reviews)
+        </div>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-3 gap-3">
+<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col items-center justify-center text-center flat-hybrid shadow-sm">
+<span class="font-headline-md text-[18px] font-bold text-primary">12+</span>
+<span class="font-caption text-caption text-outline">Yrs Exp</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col items-center justify-center text-center flat-hybrid shadow-sm">
+<span class="font-headline-md text-[18px] font-bold text-primary">4.8k+</span>
+<span class="font-caption text-caption text-outline">Patients</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col items-center justify-center text-center flat-hybrid shadow-sm">
+<span class="font-headline-md text-[18px] font-bold text-primary">30</span>
+<span class="font-caption text-caption text-outline">Tickets Left</span>
+</div>
+</div>
+</section>
+<!-- Main Content Area -->
+<section class="md:col-span-8 flex flex-col gap-section-gap">
+<!-- About Section -->
+<div class="flex flex-col gap-4">
+<h3 class="font-headline-md text-[20px] font-bold text-primary">About Doctor</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          Dr. Archie Parker is a distinguished internal medicine specialist with over a decade of clinical experience. He is renowned for his compassionate approach to diagnosis and a strong commitment to preventive healthcare. Dr. Parker focuses on creating comprehensive, patient-centered care plans that address both immediate concerns and long-term wellness in a modern, clinical environment.
+        </p>
+</div>
+<!-- Consultation Type -->
+<div class="flex flex-col gap-4">
+<h3 class="font-headline-md text-[20px] font-bold text-primary flex items-center gap-2">
+          Consultation Type
+        </h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Video Call -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] border border-outline-variant/30 flex items-center gap-4 cursor-pointer hover:bg-surface-variant transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 0;">videocam</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-primary">Video Call</h4>
+<p class="font-caption text-caption text-outline">$45 / session</p>
+</div>
+</div>
+<!-- In Clinic (Active) -->
+<div class="bg-surface-container-lowest p-4 rounded-[20px] border-2 border-secondary-fixed shadow-[0_8px_24px_rgba(203,242,3,0.15)] flex items-center gap-4 cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-secondary-fixed/5 pointer-events-none"></div>
+<div class="w-12 h-12 rounded-full bg-secondary-fixed/20 flex items-center justify-center text-secondary-fixed z-10">
+<span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings: 'FILL' 1;">local_hospital</span>
+</div>
+<div class="flex-1 z-10">
+<h4 class="font-label-md text-label-md text-primary">In-Clinic Visit</h4>
+<p class="font-caption text-caption text-outline">$60 / session</p>
+</div>
+<div class="z-10">
+<span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Availability Calendar (Placeholder for rich UI) -->
+<div class="flex flex-col gap-4">
+<h3 class="font-headline-md text-[20px] font-bold text-primary">Availability</h3>
+<div class="bg-surface-container-lowest rounded-[24px] p-6 flat-hybrid flex items-center justify-center h-32 text-outline-variant font-body-md border-dashed border-2 border-outline-variant/20">
+           Select a date to view available time slots
+        </div>
+</div>
+</section>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full z-40 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant/10 px-container-margin-mobile py-4 pb-8 md:px-container-margin-desktop shadow-[0_-10px_40px_rgba(0,0,0,0.05)] md:hidden">
+<div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+<div class="flex flex-col">
+<span class="font-caption text-caption text-outline">Total Price</span>
+<span class="font-headline-md text-[20px] font-bold text-primary">$60 / session</span>
+</div>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-8 py-4 rounded-full flex-1 clay-button active:scale-95 transition-transform max-w-[200px] flex items-center justify-center">
+        Book Appointment
+      </button>
+</div>
+</div>
+<!-- Desktop Bottom Action Bar (in flow) -->
+<div class="hidden md:flex w-full max-w-7xl mx-auto px-container-margin-desktop mb-12 justify-end">
+<div class="bg-surface-container-lowest rounded-[24px] p-6 flex items-center justify-between gap-8 shadow-lg flat-hybrid border border-outline-variant/20 min-w-[400px]">
+<div class="flex flex-col">
+<span class="font-caption text-caption text-outline">Total Price</span>
+<span class="font-headline-md text-[24px] font-bold text-primary">$60 <span class="text-[16px] text-outline font-normal">/ session</span></span>
+</div>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-8 py-4 rounded-full clay-button active:scale-95 transition-transform flex items-center gap-2 hover:bg-inverse-surface">
+          Book Appointment
+          <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>
+

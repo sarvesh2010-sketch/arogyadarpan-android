@@ -85,13 +85,6 @@ export default function DemoPage() {
               <span>MediKiosk View</span>
             </button>
             <button
-              onClick={() => navigate('/doctor')}
-              className="glass-pill px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:text-cobalt border border-slate-200 transition cursor-pointer hidden sm:flex items-center gap-1.5"
-            >
-              <Stethoscope className="size-3.5 text-emerald" />
-              <span>Doctor Portal</span>
-            </button>
-            <button
               onClick={() => navigate('/')}
               className="btn-bionic-outline px-3.5 py-1.5 text-xs font-bold flex items-center gap-1.5"
             >
@@ -303,17 +296,18 @@ export default function DemoPage() {
 
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => navigate('/doctor')}
-                className="btn-bionic w-full py-3.5 rounded-full text-white font-bold text-xs shadow-cobalt flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => navigate('/doctor/login')}
+                className="btn-bionic w-full py-3.5 rounded-full text-white font-bold text-xs shadow-cobalt flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-700 hover:brightness-110"
               >
-                <span>Launch Physician Workbench</span>
+                <Stethoscope className="size-4" />
+                <span>Doctor Login & Dashboard</span>
                 <ArrowRight className="size-4" />
               </button>
               <button
                 onClick={() => navigate('/doctor/patient/pt_00291')}
                 className="btn-bionic-outline w-full py-2.5 rounded-full text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5"
               >
-                <span>Inspect Rahul Sharma's Dossier</span>
+                <span>Inspect Patient Clinical Workbench</span>
                 <ChevronRight className="size-3.5" />
               </button>
             </div>
@@ -325,7 +319,7 @@ export default function DemoPage() {
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">
             Direct Access to Individual Clinical Modules
           </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
             <button
               onClick={() => navigate('/kiosk')}
               className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1.5 text-slate-800 font-bold transition cursor-pointer"
@@ -334,25 +328,32 @@ export default function DemoPage() {
               <span>MediKiosk Overview</span>
             </button>
             <button
+              onClick={() => navigate('/patient/interview')}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1.5 text-slate-800 font-bold transition cursor-pointer"
+            >
+              <Sparkles className="size-5 text-cobalt" />
+              <span>Voice AI Intake</span>
+            </button>
+            <button
               onClick={() => navigate('/patient/documents')}
               className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1.5 text-slate-800 font-bold transition cursor-pointer"
             >
               <FileText className="size-5 text-cobalt" />
-              <span>Medical OCR Scanner</span>
+              <span>Medical OCR</span>
             </button>
             <button
-              onClick={() => navigate('/patient/document-review')}
-              className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1.5 text-slate-800 font-bold transition cursor-pointer"
+              onClick={() => navigate('/doctor/login')}
+              className="p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex flex-col items-center gap-1.5 text-emerald-900 font-bold transition cursor-pointer"
             >
-              <History className="size-5 text-cobalt" />
-              <span>Health Timeline</span>
+              <Stethoscope className="size-5 text-emerald-600" />
+              <span>Doctor Dashboard</span>
             </button>
             <button
-              onClick={() => navigate('/doctor')}
+              onClick={() => navigate('/patient/dashboard')}
               className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1.5 text-slate-800 font-bold transition cursor-pointer"
             >
-              <Stethoscope className="size-5 text-emerald" />
-              <span>Doctor Console</span>
+              <User className="size-5 text-teal-600" />
+              <span>Patient Dashboard</span>
             </button>
           </div>
         </div>

@@ -1,8 +1,8 @@
-# 🏥 ArogyaDarpan (MediKiosk) — Complete Platform Architecture & Workflow
+# 🏥 ArogyaDarpan Android — Complete Platform Architecture & Workflow
 
 > **Core Philosophy:** *"AI Prepares. AI Explains. The Doctor Decides."*
 > 
-> ArogyaDarpan is an **AI-Assisted Smart OPD Clinical Intake & Triage Kiosk System** designed to streamline hospital outpatient queues in India. It assists physicians by automating clinical history elicitation, document digitization, emergency triage calculation, and ABDM/FHIR export without ever making autonomous medical decisions.
+> ArogyaDarpan Android is an **AI-Assisted Smart OPD Clinical Intake, Multilingual Triage & Doctor Workbench Mobile/Kiosk Application** developed for the Smart India Hackathon (SIH 2026). It bridges the clinical communication divide across India's regional languages through **voice-driven multilingual symptom reporting**, **on-device/cloud LLM clinical summary generation**, **prescription & lab report OCR**, and a **protected Doctor Review Portal**.
 
 ---
 
@@ -10,244 +10,239 @@
 
 ```mermaid
 flowchart TD
-    subgraph Patient_Journey [1. Patient Kiosk Journey]
-        A["1. Language Selection (English / हिन्दी / ਪੰਜਾਬੀ)"] --> B["2. DPDP Act 2023 Consent & Privacy"]
-        B --> C["3. Patient Identification & ABHA ID"]
-        C --> D["4. Multilingual Clinical Intake (Voice + Touch)"]
-        D --> E["5. Medical Document OCR Scanning (Tesseract.js)"]
-        E --> F["6. Dynamic Timeline & AI Plain-Language Report Insights"]
-        F --> G["7. Patient Verification & Confirmation"]
-        G --> H["8. Session Complete / Waiting Area Queue"]
+    subgraph Patient_Journey [1. Patient Mobile & Kiosk Intake]
+        A["1. Regional Language Selection (10 Indian Languages)"] --> B["2. DPDP Act 2023 Consent & Voice Read-Aloud"]
+        B --> C["3. Patient Identification & ABHA ID Linkage"]
+        C --> D["4. Multilingual Clinical Intake (Conversational Voice AI + Touch)"]
+        D --> E["5. Medical Document & Prescription OCR Scanner"]
+        E --> F["6. Dynamic Health Timeline & Plain-Language Report Insights"]
+        F --> G["7. Patient Confirmation with LLM Summary & Voice Read-Aloud"]
+        G --> H["8. Queue Pass Generation with Expandable AI Summary Card"]
     end
 
-    subgraph Intelligent_Engines [2. Under-the-Hood Clinical Engines]
-        D -.->|Real-time Vitals & Severity| ESI["Multi-Parametric Triage & ESI Radar Engine"]
-        D -.->|SOCRATES Framework| NLP["Medical NLP Entity Parser Engine"]
-        D -.->|Deterministic Rules| Rules["Clinical Red-Flag & Emergency Engine"]
-        E -.->|In-Browser Client OCR| OCR["Client-Side OCR & Data Extractor"]
-        F -.->|HL7 FHIR R4 Standard| FHIR["ABDM / FHIR Document Bundle Generator"]
-        D & E -.->|Safety Matrix| DDI["Drug-Drug & Allergy Contraindication Matrix"]
+    subgraph Under_The_Hood_Engines [2. Under-the-Hood Clinical AI Engines]
+        D -.->|10-Language Speech & NLP| VoiceAI["Multilingual Conversational AI Engine (conversationalAiEngine.js)"]
+        D -.->|Real-time Vitals & Severity| ESI["Multi-Parametric ESI Radar Engine (triageEngine.js)"]
+        D -.->|Deterministic Rules| Rules["Clinical Red-Flag & Emergency Engine (clinicalRules.js)"]
+        E -.->|In-Browser & Device OCR| OCR["Client-Side OCR & Data Extractor (ocrEngine.js)"]
+        F & G -.->|SOAP & Plain Guide| LLM["LLM Clinical Summary Engine (llmSummaryService.js)"]
+        G & H -.->|Standardized R4| FHIR["ABDM / HL7 FHIR Bundle Generator (abdmService.js)"]
+        D & E -.->|Safety Checks| DDI["Drug-Drug & Allergy Contraindication Matrix (drugInteractionEngine.js)"]
     end
 
-    subgraph Doctor_Workbench [3. Doctor Clinical Dashboard]
-        H --> Q["Real-Time Prioritized Patient Queue"]
-        Q --> W["Doctor Review Workbench"]
-        W --> V1["Review SOCRATES & 8-Part Clinical Summary"]
-        W --> V2["Review AI Differential Diagnoses & ICD-10 Candidates"]
-        W --> V3["Inspect Original OCR Source Documents & Audio Transcripts"]
-        W --> V4["Check Drug Interactions, Contraindications & Allergy Conflicts"]
-        W --> DocDecision["Doctor Verification (Confirm / Edit / Reject)"]
-        DocDecision --> ABDM_Push["Push Standardized HL7 FHIR Bundle to Hospital EHR / ABDM"]
+    subgraph Doctor_Portal [3. Protected Doctor Portal & Workbench]
+        Auth["Doctor Login (doctorAuthService.js / DoctorLogin.jsx)"] --> Q["Real-Time Prioritized OPD Queue (DoctorDashboard.jsx)"]
+        Q --> W["Doctor Review Workbench (PatientDetail.jsx)"]
+        W --> V1["Review SOCRATES History & Demographics"]
+        W --> V2["Inspect Scanned Prescriptions, ECG Strips & OCR Data"]
+        W --> V3["Generate / Verify Doctor SOAP Note & Action Items (LLM)"]
+        W --> V4["Check Drug-Drug Contraindications & Safety Alerts"]
+        W --> V5["Differential Diagnoses & ICD-10 Candidate Rankings"]
+        W --> DocDecision["Doctor Action: Verify, Edit, Reject & Prescribe"]
+        DocDecision --> ABDM_Push["Export Standardized HL7 FHIR Bundle to Hospital EHR"]
     end
 ```
 
 ---
 
-## 📁 Complete Codebase Structure & File Tree
+## 📁 Codebase Structure & File Tree (`arogyadarpan-android`)
 
 ```
-arogyadarpan/
-├── index.html                      # Single page entry point with Google Fonts
-├── package.json                    # Dependencies (React, Vite, Tailwind v4, Lucide, Framer Motion, Tesseract.js)
+arogyadarpan-android/
+├── index.html                      # HTML5 container with Inter & Outfit typography
+├── package.json                    # Capacitor 7, React 19, Tailwind v4, Lucide, Framer Motion, Tesseract.js
 ├── vite.config.js                  # Vite bundler configuration
+├── capacitor.config.json           # Native Capacitor mobile bridge configuration
+├── android/                        # Native Android Studio project (Gradle, Manifest, Plugins)
 │
 ├── src/                            # FRONTEND APPLICATION SOURCE
-│   ├── main.jsx                    # React root renderer
-│   ├── App.jsx                     # Router, route transitions (AnimatePresence), route guard redirects
-│   ├── index.css                   # Tailwind v4 theme, HSL medical color palette, animation tokens
+│   ├── main.jsx                    # React 19 root renderer
+│   ├── App.jsx                     # Router, animations (AnimatePresence), Doctor & Patient route definitions
+│   ├── index.css                   # Tailwind v4 theme, HSL medical color palette, glassmorphism tokens
 │   │
-│   ├── pages/                      # ROUTE PAGES
-│   │   ├── LandingPage.jsx         # Public landing page with kiosk launcher & demo entry
-│   │   ├── DemoPage.jsx            # Quick Demo selection portal (Patient vs Doctor journeys)
+│   ├── pages/                      # APPLICATION ROUTE PAGES
+│   │   ├── LandingPage.jsx         # Kiosk launcher, Doctor Portal button, and feature showcase
+│   │   ├── DemoPage.jsx            # Interactive testing suite (Golden Demo, Patient flow, Doctor Portal)
 │   │   │
-│   │   ├── patient/                # PATIENT KIOSK INTAKE FLOW
-│   │   │   ├── LanguageSelection.jsx    # Step 1: Language selection (English, Hindi, Punjabi)
+│   │   ├── patient/                # PATIENT INTAKE & TRIAGE JOURNEY
+│   │   │   ├── SplashScreen.jsx         # App intro splash screen with native status bar config
+│   │   │   ├── LanguageSelection.jsx    # Step 1: 10 Indian language switcher
 │   │   │   ├── ConsentScreen.jsx        # Step 2: DPDP Act 2023 & ABDM consent with audio read-aloud
-│   │   │   ├── PatientIdentification.jsx# Step 3: Patient demographic details, phone validation & ABHA ID
-│   │   │   ├── InterviewScreen.jsx      # Step 4: Voice/touch intake, SOCRATES, AYUSH track & live radar
-│   │   │   ├── DocumentUpload.jsx       # Step 5: Prescription & lab report scanning with client OCR
+│   │   │   ├── PatientIdentification.jsx# Step 3: Demographics, phone verification & ABHA ID linkage
+│   │   │   ├── InterviewScreen.jsx      # Step 4: Voice/touch intake, SOCRATES questions & Conversational AI
+│   │   │   ├── DocumentUpload.jsx       # Step 5: Prescription & lab report camera/file upload with OCR
 │   │   │   ├── DocumentReview.jsx       # Step 6: Dynamic medical timeline & plain-language AI report insights
-│   │   │   ├── ConfirmationScreen.jsx   # Step 7: Patient verification checklist & allergy conflict flag
-│   │   │   └── CompletionScreen.jsx     # Step 8: Session complete with new session reset option
+│   │   │   ├── ConfirmationScreen.jsx   # Step 7: Pre-intake checklist + Embedded LLM Clinical Summary
+│   │   │   ├── CompletionScreen.jsx     # Step 8: OPD Queue Pass with expandable AI Summary card
+│   │   │   └── PatientDashboard.jsx     # Patient health dossier with Voice AI quick-launch tile
 │   │   │
-│   │   └── doctor/                 # DOCTOR DASHBOARD & CLINICAL WORKBENCH
-│   │       ├── DoctorDashboard.jsx      # Triage-sorted OPD queue with search and status filters
-│   │       └── PatientDetail.jsx        # 8-part SIH summary, AYUSH tab, ICD-10 differentials & FHIR export
+│   │   └── doctor/                 # PROTECTED DOCTOR PORTAL & WORKBENCH
+│   │       ├── DoctorLogin.jsx          # Secure Doctor Login with 1-tap quick demo bypass (Dr. Sharma)
+│   │       ├── DoctorDashboard.jsx      # Triage-sorted OPD queue, ESI-2 priority filter, and search
+│   │       └── PatientDetail.jsx        # Clinical review workbench: SOCRATES, OCR docs, LLM SOAP notes & orders
 │   │
 │   ├── components/                 # REUSABLE UI & CLINICAL COMPONENTS
-│   │   ├── Button.jsx              # Accessible button with primary/secondary/ghost/danger variants
-│   │   ├── Card.jsx                # Glassmorphic card container with hover & active ring states
-│   │   ├── Badge.jsx               # Severity & status badge with color coding (critical/warning/success)
-│   │   ├── ConfidenceBadge.jsx     # Visual confidence indicator for AI-extracted entities (e.g. 96%)
-│   │   ├── ClinicalSignalCard.jsx  # Red-flag alert card with source citation and disclaimer
-│   │   ├── SymptomRadarCard.jsx    # Real-time multi-symptom triage radar with ESI severity level
-│   │   ├── CompletenessTracker.jsx # Visual checklist tracking all required clinical history categories
-│   │   ├── AYUSHModeToggle.jsx     # Toggle switch between Modern Medicine & Ayurvedic examination
-│   │   ├── VoiceRecorder.jsx       # Audio recording button with animated audio wavebars
-│   │   ├── Timeline.jsx            # Vertical interactive patient health history timeline
-│   │   ├── VerificationButtons.jsx # Doctor "Confirm / Edit / Reject" interactive controls
-│   │   ├── DrugSafetyBanner.jsx    # Real-time drug-drug & allergy contraindication warnings
+│   │   ├── ConversationalVoiceModal.jsx # 10-language voice dialogue modal with STT/TTS & entity extractor
+│   │   ├── LLMSummaryGenerator.jsx      # Clinical SOAP note, patient guide, voice audio playback & model switcher
+│   │   ├── LLMConfigModal.jsx           # Cloud/Local AI configuration (Gemini, Groq, OpenAI, Ollama)
+│   │   ├── CameraCaptureModal.jsx       # Live camera photo capture for prescriptions & lab records
+│   │   ├── LanguageSelector.jsx         # Regional language dropdown / compact selector
+│   │   ├── ConfidenceBadge.jsx          # Visual confidence indicator for AI-extracted entities (e.g. 96%)
+│   │   ├── ClinicalSignalCard.jsx       # Red-flag emergency alert card with clinical citations
+│   │   ├── SymptomRadarCard.jsx         # Real-time multi-symptom triage radar with ESI severity level
+│   │   ├── CompletenessTracker.jsx      # Progress tracker covering all required clinical history fields
+│   │   ├── Timeline.jsx                 # Interactive vertical health chronology
+│   │   ├── VerificationButtons.jsx      # Doctor "Confirm / Edit / Reject" interactive controls
+│   │   ├── DrugSafetyBanner.jsx         # Real-time drug-drug & allergy contraindication warnings
 │   │   ├── DifferentialDiagnosisWidget.jsx # AI differential diagnosis ranking with ICD-10 codes
-│   │   ├── EvidenceDrawer.jsx      # Slide-over panel showing verbatim OCR text / voice transcripts
-│   │   ├── DocumentInspectorModal.jsx # Full-screen modal for inspecting uploaded medical records
-│   │   ├── KioskView.jsx           # Fullscreen physical kiosk station mode wrapper
-│   │   ├── ConnectionStatus.jsx    # Real-time offline/online & backend sync indicator
-│   │   ├── LoadingState.jsx        # Skeleton loader and pulsing medical spinner
-│   │   └── ProgressBar.jsx         # Smooth animated multi-step progress indicator
+│   │   ├── EvidenceDrawer.jsx           # Slide-over panel displaying raw OCR text and voice transcripts
+│   │   ├── DocumentInspectorModal.jsx   # Full-screen modal for inspecting uploaded medical records
+│   │   └── KioskView.jsx                # Fullscreen MediKiosk physical station mode wrapper
 │   │
 │   ├── hooks/                      # CUSTOM REACT HOOKS
-│   │   ├── useInterview.js         # Manages adaptive question sequence, completeness, & triage state
-│   │   └── useVoiceInput.js        # Web Speech API wrapper with multilingual STT & fallback handling
+│   │   ├── useInterview.js         # Manages adaptive questions, completeness, and triage state
+│   │   └── useVoiceInput.js        # Multilingual Speech-to-Text wrapper with fallback handling
 │   │
-│   ├── services/                   # CORE CLINICAL INTELLIGENCE ENGINES
-│   │   ├── clinicalRules.js        # Deterministic emergency red-flag rules (no LLM hallucinations)
-│   │   ├── triageEngine.js         # Multi-parametric ESI Level 1-5 classification & risk scoring
-│   │   ├── medicalParserService.js # Clinical NLP entity extractor for symptoms, drugs, & lab tests
-│   │   ├── ocrEngine.js            # Tesseract.js in-browser OCR scanner with date extraction
-│   │   ├── drugInteractionEngine.js# Drug-drug interaction & allergy contraindication matrix
-│   │   ├── differentialEngine.js   # AI differential diagnosis generator with ICD-10 mapping
-│   │   ├── reportInsightEngine.js  # Plain-language report explanation & curative guidance
-│   │   ├── abdmService.js          # Standardized HL7 FHIR R4 document bundle generator
-│   │   └── sessionStore.js         # LocalStorage reactive store, label formatter, & timeline builder
+│   ├── services/                   # CLINICAL INTELLIGENCE & AI SERVICES
+│   │   ├── conversationalAiEngine.js# Multilingual symptom recognition and dialogue engine (10 languages)
+│   │   ├── llmSummaryService.js     # Clinical SOAP note & patient explanation generator (Cloud & Offline)
+│   │   ├── doctorAuthService.js     # Protected doctor authentication session and credentials
+│   │   ├── clinicalRules.js         # Deterministic emergency red-flag rules (no LLM hallucinations)
+│   │   ├── triageEngine.js          # Multi-parametric ESI Level 1-5 classification & risk scoring
+│   │   ├── medicalParserService.js  # Clinical NLP entity extractor for symptoms, drugs, & lab tests
+│   │   ├── ocrEngine.js             # Tesseract.js in-browser OCR scanner with date and entity extraction
+│   │   ├── drugInteractionEngine.js # Drug-drug interaction & allergy contraindication matrix
+│   │   ├── differentialEngine.js    # AI differential diagnosis generator with ICD-10 mapping
+│   │   ├── reportInsightEngine.js   # Plain-language report explanation & curative guidance
+│   │   ├── abdmService.js           # Standardized HL7 FHIR R4 document bundle generator
+│   │   ├── sessionStore.js          # Reactive store, doctor patient queue, and local persistence
+│   │   ├── audioService.js          # Web Speech Synthesis text-to-speech audio helper
+│   │   └── nativeCamera.js          # Capacitor Camera hardware bridge
 │   │
 │   └── data/                       # CLINICAL ONTOLOGIES & DEMO DATA
-│       ├── questionBank.js         # SOCRATES pain trees, AYUSH Dashavidha questions, ROS questions
-│       └── demoPatients.js         # Pre-loaded clinical profiles (Rahul Sharma, Sunita Devi, etc.)
-│
-└── backend/                        # EXPRESS / NODE.JS REST API (Optional Standalone Server)
-    ├── server.js                   # Express server entry point (Port 5000) with CORS & file uploads
-    ├── package.json                # Express, Mongoose, Multer, Dotenv dependencies
-    │
-    ├── models/                     # MONGOOSE DATA SCHEMAS
-    │   ├── Patient.js              # Patient demographic schema with ABHA ID & telecom
-    │   ├── Consultation.js         # Consultation visit schema with ESI status & department
-    │   ├── InterviewResponse.js    # Single question response schema with confidence score
-    │   ├── ClinicalSignal.js       # Red flag signal schema with severity & status
-    │   ├── Document.js             # Uploaded medical document record schema with OCR payload
-    │   └── Summary.js              # Structured 8-part clinical summary schema
-    │
-    ├── routes/                     # API ENDPOINTS
-    │   ├── patientRoutes.js        # CRUD /api/patients
-    │   ├── consultationRoutes.js   # CRUD /api/consultations
-    │   ├── interviewRoutes.js      # CRUD /api/interview
-    │   ├── documentRoutes.js       # File upload & OCR /api/documents
-    │   ├── doctorRoutes.js         # Doctor queue & patient workbench /api/doctor
-    │   └── summaryRoutes.js        # Summary generation & EHR push /api/summary
-    │
-    └── services/                   # BACKEND SERVICES
-        ├── ocrService.js           # Server-side Tesseract OCR processing fallback
-        ├── summaryService.js       # Server-side clinical summary compiler
-        ├── abdmService.js          # Server-side ABDM FHIR bundle builder
-        └── questionService.js      # Dynamic question sequence generator
+│       ├── translations.js          # 10 Indian languages UI localization strings
+│       ├── questionBank.js          # SOCRATES pain trees, ROS questions, and clinical options
+│       └── demoPatients.js          # Pre-loaded clinical profiles (Rahul Sharma, Sunita Devi, etc.)
 ```
 
 ---
 
-## 📋 Comprehensive Step-by-Step Breakdown
+## 📋 Comprehensive Feature Walkthrough
 
 ---
 
-### Phase 1: Patient Kiosk Intake Journey
+### Feature 1: Multilingual Conversational AI (Voice & Text across 10 Languages)
 
-| Step | Component / Route | Key Features & Implementation |
-|---|---|---|
-| **1. Language Selection** | `/patient/language`<br>`src/pages/patient/LanguageSelection.jsx` | • Supports **English**, **हिन्दी (Hindi)**, and **ਪੰਜਾਬੀ (Punjabi)**.<br>• Adapts UI text, voice synthesis (TTS), and speech recognition (STT) immediately. |
-| **2. Consent Framework** | `/patient/consent`<br>`src/pages/patient/ConsentScreen.jsx` | • Compliant with India's **Digital Personal Data Protection (DPDP) Act 2023** and ABDM standards.<br>• Granular consent checkboxes for history collection, document digitization, and ABHA sync.<br>• Multilingual audio **Read Aloud** feature. |
-| **3. Identification** | `/patient`<br>`src/pages/patient/PatientIdentification.jsx` | • Captures Name, Age, Gender, 10-digit Phone validation, and optional ABHA ID.<br>• Includes a 1-click **"Golden Demo Patient" (Rahul Sharma)** for demonstration. |
-| **4. Adaptive Intake Interview** | `/patient/interview`<br>`src/pages/patient/InterviewScreen.jsx` | • **SOCRATES Pain & Symptom Framework**: Site, Onset, Character, Radiation, Associations, Time course, Exacerbating factors, Severity (1-10).<br>• **Multimodal Input**: Voice recognition (Web Speech API) and touch selection.<br>• **Dual Track**: Standard Modern Medicine track + AYUSH **Dashavidha Pariksha** (10-fold assessment: Prakriti, Agni, Dhatu, Sara).<br>• **Simple Mode**: Large-font, high-contrast interface for low-literacy users. |
-| **5. Document Digitization** | `/patient/documents`<br>`src/pages/patient/DocumentUpload.jsx` | • Client-side OCR powered by **Tesseract.js**.<br>• Extracts past diagnoses, medications, dosages, lab test results, and documented allergies right in the browser.<br>• No unencrypted images are leaked across third-party cloud servers. |
-| **6. Dynamic Timeline & Insights** | `/patient/document-review`<br>`src/pages/patient/DocumentReview.jsx` | • Plain-language explanations in English and Hindi (e.g. explaining what HbA1c, anemia, or hypertension mean).<br>• Assembles a chronological medical history timeline from current complaints and past lab records.<br>• Clear curative lifestyle and management guidance. |
-| **7. Patient Confirmation** | `/patient/confirmation`<br>`src/pages/patient/ConfirmationScreen.jsx` | • Empowers the patient to verify and edit their captured intake information.<br>• Highlights potential conflicts (e.g. "No allergy" reported vs "Penicillin allergy" in past documents). |
-| **8. Completion** | `/patient/complete`<br>`src/pages/patient/CompletionScreen.jsx` | • Directs patient to the waiting area.<br>• Provides clean session resets for the next patient in line. |
+Patients can express their symptoms naturally using voice or text in any of India's major regional languages.
 
----
+- **Supported Languages**:
+  1. English (`en`)
+  2. हिन्दी - Hindi (`hi-IN`)
+  3. বাংলা - Bengali (`bn-IN`)
+  4. தமிழ் - Tamil (`ta-IN`)
+  5. తెలుగు - Telugu (`te-IN`)
+  6. मराठी - Marathi (`mr-IN`)
+  7. ગુજરાતી - Gujarati (`gu-IN`)
+  8. ಕನ್ನಡ - Kannada (`kn-IN`)
+  9. ਪੰਜਾਬੀ - Punjabi (`pa-IN`)
+  10. മലയാളം - Malayalam (`ml-IN`)
 
-### Phase 2: Under-the-Hood Clinical Intelligence Engines
-
-1. **Deterministic Red-Flag Rules (`src/services/clinicalRules.js`)**:
-   - Zero LLM hallucination risk for critical medical emergencies.
-   - Evaluates rules such as:
-     - *Chest Pain + Left Arm Radiation (Critical / ACS)*
-     - *Chest Pain + Severe Pain Score (≥8/10)*
-     - *Diabetic Patient presenting with Chest Pain*
-     - *Breathlessness + Profuse Sweating (Diaphoresis)*
-     - *Prolonged High Fever (>1 week)*
-
-2. **Multi-Parametric Clinical Triage (`src/services/triageEngine.js`)**:
-   - Calculates **Emergency Severity Index (ESI Level 1 to 5)**.
-   - Adjusts risk based on patient age, gender, cardiac risk factors, and abnormal lab biomarkers.
-   - Dynamically injects targeted follow-up questions during intake.
-
-3. **Medical Entity NLP Parser (`src/services/medicalParserService.js`)**:
-   - Scans natural voice speech and OCR text against dictionaries of symptoms, standard Indian pharmaceutical brands and generics (Metformin, Telmisartan, Amlodipine, Atorvastatin, Glimepiride), and lab tests (HbA1c, Fasting Blood Glucose, WBC, Creatinine, Lipid profile, TSH).
-
-4. **Clinical Drug Safety Matrix (`src/services/drugInteractionEngine.js`)**:
-   - Cross-references active drugs against documented allergies (e.g., *Penicillin allergy vs Amoxicillin*).
-   - Flags drug-drug interactions (e.g., *Amlodipine + Atorvastatin*, *Aspirin + Metformin*).
-   - Warns on lifestyle risks (*Metformin + Alcohol*) and co-morbidities (*NSAIDs + Hypertension*).
-
-5. **AI Differential Diagnosis & ICD-10 Engine (`src/services/differentialEngine.js`)**:
-   - Suggests candidate diagnoses sorted by match probability with formal ICD-10 codes, evidence citations, and recommended clinical tests (e.g. 12-Lead ECG, Troponin-T).
-
-6. **ABDM / HL7 FHIR R4 Generator (`src/services/abdmService.js`)**:
-   - Compiles every patient intake session into an official **HL7 FHIR R4 Document Bundle** containing:
-     - `Bundle.identifier`
-     - `Composition` resource (encounter report summary)
-     - `Patient` resource (ABHA ID, demographic details)
-     - `Condition` resource (Chief complaint & HPI)
-     - `MedicationStatement` resources (active drug list)
-     - `Observation` resources (lab investigation results)
-     - `AllergyIntolerance` resource (documented allergies)
+- **Workflow**:
+  1. Patient taps **"🎙️ बोलकर अपने लक्षण बताएं (Conversational Voice AI)"** on the interview screen or patient dashboard.
+  2. Patient speaks naturally (e.g., *"सीने में बहुत तेज दर्द है और कल से चक्कर आ रहे हैं"* or *"எனக்கு 2 நாட்களாக கடுமையான காய்ச்சல் உள்ளது"*).
+  3. The engine parses the voice transcript into structured clinical entities:
+     - **Primary Complaint**: Identified and normalized into standard clinical categories (Chest Pain, Fever, Cough, etc.).
+     - **Onset & Duration**: Captured (today, 1 day, 2-3 days, 1 week).
+     - **Severity**: Extracted (1 to 10 scale).
+     - **Associated Symptoms**: Flagged (dizziness, breathlessness, nausea, etc.).
+  4. The AI speaks back a reassuring confirmation in the patient's language via Text-to-Speech.
+  5. The patient taps **"Apply to Intake"** to populate the clinical record and advance the workflow.
 
 ---
 
-### Phase 3: Doctor Workbench & Verification
+### Feature 2: LLM Clinical Summary Generator
 
-1. **Prioritized OPD Queue (`src/pages/doctor/DoctorDashboard.jsx`)**:
-   - Patients sorted by urgency with color-coded badges:
-     - 🔴 **Critical Priority** (ESI Level 2 / Red-Flag Alerts)
-     - 🟡 **Needs Verification** (Allergy conflicts or abnormal labs)
-     - 🟢 **Ready for Consultation**
-   - Real-time search bar (by patient name, complaint, phone) and filter tabs.
+Situated on the final patient review screens and inside the Doctor Workbench, the LLM Summary Generator creates high-utility clinical notes and plain-language guides.
 
-2. **Clinical Review Workbench (`src/pages/doctor/PatientDetail.jsx`)**:
-   - **8-Part SIH Structured Summary**:
-     1. Chief Complaint
-     2. History of Present Illness (SOCRATES framework breakdown)
-     3. Past Medical & Surgical History
-     4. Drug & Allergy History
-     5. Family History
-     6. Personal & Lifestyle History (*Ahara-Vihara*)
-     7. Review of Systems (ROS)
-     8. Prior Investigations Summary
-   - **AYUSH Dashavidha Pariksha Tab**: 10-fold Ayurvedic assessment (Prakriti, Vikriti, Sara, Samhanana, Satmya, Sattva, Ahara Shakti, Vyayama Shakti, Vaya, Koshtha).
-   - **Evidence Inspector**: 1-click drawer to inspect original OCR scanned prescriptions or audio transcripts.
-   - **Human-in-the-Loop Verification**: Doctor confirms, edits, or rejects each AI-generated section before permanent filing.
-   - **1-Click FHIR Export**: View and export standard ABDM JSON bundles.
+- **AI Providers Supported**:
+  - **Google Gemini** (Gemini 2.5 Flash / Flash-Lite / Pro)
+  - **Groq Cloud** (Llama 3.3 70B Versatile, Llama 3.1 8B Instant)
+  - **OpenAI** (GPT-4o mini, GPT-4o)
+  - **Custom Hospital Ollama / Local Server**
+  - **Built-in Offline Clinical Intelligence** (guaranteed 100% availability with no internet)
+
+- **Generated Outputs**:
+  - **Doctor SOAP Note**:
+    - **S (Subjective)**: Patient narrative, chief complaint, SOCRATES breakdown, and lifestyle factors.
+    - **O (Objective)**: Vitals summary, ECG telemetry findings, and OCR-extracted lab values (HbA1c, Troponin).
+    - **A (Assessment)**: ESI triage level (e.g. Level 2 - Emergent) and differential diagnosis candidates.
+    - **P (Plan & Safety)**: Recommended diagnostic investigations, stat medications, and allergy contraindications.
+  - **Patient Plain-Language Guide**:
+    - Clear, empathetic explanation of their condition in the patient's selected Indian language.
+    - Questions to ask Dr. Sharma during consultation.
+  - **Physician Action Items**:
+    - Bulleted urgent orders (e.g. Stat 12-lead ECG, Serial Troponin-I, Cardiology consultation).
+  - **Audio Read-Aloud**:
+    - 1-click text-to-speech audio playback in any of the 10 supported regional languages.
 
 ---
 
-## ⚡ Quick Start & Live Demo
+### Feature 3: Protected Doctor Portal (Login, Dashboard & Patient Detail)
 
-### 1. Install & Run
+Ensures patient medical data is accessible only by verified healthcare professionals.
+
+1. **Doctor Authentication (`/doctor/login`)**:
+   - Access restricted to credentialed physicians (Default: **Dr. Ananya Sharma**, NMC Reg: `DMC-2018-4921`).
+   - Route protection: Direct navigation to `/doctor` or `/doctor/patient/:id` automatically redirects unauthenticated users to `/doctor/login`.
+   - **Quick Demo Login**: 1-tap instant bypass button for SIH judges and evaluators.
+
+2. **OPD Triage Dashboard (`/doctor`)**:
+   - Real-time overview of all queued patients with ESI priority ranking.
+   - Live KPI counters: Total OPD patients, Critical ESI-2 count, OCR documents processed, and Verified records.
+   - Filter tabs: `All Patients`, `Critical ESI-2`, `Verified`, `Pending Review`.
+   - Patient queue cards showing ABHA ID, vital signs (BP, SpO2, Heart Rate), chief complaint, and red-flag alerts.
+   - Clicking any patient opens the comprehensive Patient Detail Workbench.
+
+3. **Patient Detail Workbench (`/doctor/patient/:id`)**:
+   - **Demographic Dossier & ABHA Linkage**: Patient profile, age, gender, blood group, and emergency contact.
+   - **Real-Time Vitals Telemetry**: Continuous heart rate, blood pressure, and SpO2 monitoring with abnormal threshold alerts.
+   - **SOCRATES History Breakdown**: Site, Onset, Character, Radiation, Associations, Timing, Exacerbating factors, and Severity.
+   - **Prescription & Lab OCR Inspector**: View original camera captures alongside verbatim OCR-extracted medication names and test results.
+   - **Embedded LLM Summary Generator**: Review, edit, or regenerate the SOAP note and patient explanation directly within the doctor workspace.
+   - **Drug-Drug & Allergy Contraindications**: Real-time cross-referencing between patient allergies and prescribed medications.
+   - **Differential Diagnosis Widget**: Ranked candidate conditions with matching ICD-10 codes.
+   - **Physician Orders & Action Trail**: Write prescriptions, order lab tests, add doctor notes, and confirm/reject AI findings with audit logging.
+   - **ABDM FHIR R4 Bundle Export**: View and export standardized HL7 FHIR JSON document bundles.
+
+---
+
+## ⚡ Quick Start & Verification Commands
+
+### 1. Development Dev Server
 ```bash
-# Frontend
-cd arogyadarpan
-npm install
+cd arogyadarpan-android
 npm run dev
-
-# Backend (Optional for standalone demo mode)
-cd backend
-npm install
-npm start
 ```
 
-### 2. Golden Demo Path:
-1. Open **`http://localhost:5173/demo`** in any modern web browser.
-2. Click **"Start Golden Path Demo"**.
-3. Follow the sequence: **Language (English/Hindi/Punjabi)** ➔ **Consent** ➔ **Rahul Sharma (46 yrs)** ➔ **Intake Interview (Chest Pain with Voice/Touch)** ➔ **Document Scan** ➔ **Timeline & Insights** ➔ **Patient Confirmation**.
-4. Open the **Doctor Dashboard (`http://localhost:5173/doctor`)** and select **Rahul Sharma** to review the AI-prepared summary, allergy conflict detection, drug safety alerts, and ICD-10 differential recommendations!
+### 2. Build for Production
+```bash
+cd arogyadarpan-android
+npm run build
+```
+
+### 3. Sync to Android Native Project
+```bash
+cd arogyadarpan-android
+npm run build:android
+# or
+npx cap sync
+```
+
+### 4. Open in Android Studio
+```bash
+npx cap open android
+```
 
 ---
 
-*ArogyaDarpan — Developed for Smart India Hackathon (SIH) & Next-Generation Digital Healthcare in India.*
+*ArogyaDarpan Android — Developed for Smart India Hackathon (SIH 2026).*

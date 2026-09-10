@@ -169,6 +169,37 @@ const translations = {
     clinicalHistoryForm: 'Structured Clinical History Form',
     switchFormView: 'Switch to Full Form View',
     switchStepView: 'Switch to Step-by-Step View',
+    startHealthCheck: 'Start Health Check',
+    mild: 'Mild',
+    moderate: 'Moderate',
+    severe: 'Severe / Worst',
+    confirmSeverity: 'Confirm Severity',
+    questionOf: 'Question',
+    viewOtherComplaints: '+ View other complaints',
+    hideOtherComplaints: '− Hide other complaints',
+    allAnswers: 'All Answers',
+    stepView: 'Step View',
+    listen: 'Listen',
+    stop: 'Stop',
+    playRecording: 'Play Your Voice',
+    conversationalAi: 'Free-Flow Voice AI',
+    digitalIntake: 'Digital Clinical Intake',
+    confidential: 'Fast & Confidential',
+    privacyNotice: 'Ayushman Bharat (ABDM) Compliant • 100% Private',
+    cameraViewfinder: 'Document Camera Viewfinder',
+    captureDocument: 'Capture Medical Document',
+    alignCorners: 'Align all 4 corners',
+    optimalLight: 'Optimal Light',
+    uploadPdf: 'Upload PDF',
+    torchOn: 'Auto Torch',
+    torchOff: 'Torch Off',
+    autoSnapOn: 'Auto-Snap On',
+    cameraError: 'Camera Not Available',
+    retryCamera: 'Retry Access',
+    selectDocumentType: 'Document Type',
+    holdSteady: 'Hold steady under good lighting',
+    ayushTrack: '🌿 AYUSH Track',
+    allopathicTrack: '🩺 Allopathic Track',
   },
 
   hi: {
@@ -334,6 +365,37 @@ const translations = {
     clinicalHistoryForm: 'संरचित क्लिनिकल इतिहास फॉर्म',
     switchFormView: 'पूर्ण फॉर्म दृश्य पर जाएँ',
     switchStepView: 'चरण-दर-चरण दृश्य पर जाएँ',
+    startHealthCheck: 'स्वास्थ्य जांच शुरू करें',
+    mild: 'हल्का',
+    moderate: 'मध्यम',
+    severe: 'असहनीय / तीव्र',
+    confirmSeverity: 'तीव्रता की पुष्टि करें',
+    questionOf: 'प्रश्न',
+    viewOtherComplaints: '+ अन्य समस्याएं देखें',
+    hideOtherComplaints: '− अन्य समस्याएं छिपाएं',
+    allAnswers: 'सभी उत्तर',
+    stepView: 'स्टेप दृश्य',
+    listen: 'सुनें',
+    stop: 'रोकें',
+    playRecording: 'अपनी आवाज़ सुनें',
+    conversationalAi: 'मुक्त बातचीत Voice AI',
+    digitalIntake: 'डिजिटल क्लिनिकल पूछताछ',
+    confidential: 'त्वरित एवं गोपनीय',
+    privacyNotice: 'आयुष्मान भारत (ABDM) अनुरूप • 100% निजी',
+    cameraViewfinder: 'दस्तावेज़ कैमरा दृश्य',
+    captureDocument: 'दस्तावेज़ की फ़ोटो लें',
+    alignCorners: 'पर्चे के चारों कोने हरे फ्रेम में रखें',
+    optimalLight: 'उत्तम प्रकाश',
+    uploadPdf: 'PDF अपलोड करें',
+    torchOn: 'ऑटो टॉर्च',
+    torchOff: 'टॉर्च बंद',
+    autoSnapOn: 'ऑटो-स्नैप चालू',
+    cameraError: 'कैमरा उपलब्ध नहीं है',
+    retryCamera: 'पुनः प्रयास करें',
+    selectDocumentType: 'दस्तावेज़ प्रकार',
+    holdSteady: 'अच्छी रोशनी में स्थिर रखें',
+    ayushTrack: '🌿 आयुष (AYUSH)',
+    allopathicTrack: '🩺 आधुनिक (Allopathic)',
   },
 
   bn: {
@@ -1227,6 +1289,33 @@ const translations = {
 
 export function t(key, lang = 'en') {
   return translations[lang]?.[key] || translations.en[key] || key
+}
+
+export const CATEGORY_TRANSLATIONS = {
+  chief_complaint: { en: 'Chief Complaint', hi: 'मुख्य शिकायत', bn: 'প্রধান সমস্যা', ta: 'முக்கிய பிரச்சனை', te: 'ప్రధాన సమస్య', mr: 'मुख्य तक्रार', gu: 'મુખ્ય ફરિયાદ', kn: 'ಮುಖ್ಯ ದೂರು', pa: 'ਮੁੱਖ ਸ਼ਿਕਾਇਤ', ml: 'പ്രധാന പരാതി' },
+  duration: { en: 'Onset & Duration', hi: 'शुरुआत और समय', bn: 'সময়কাল', ta: 'கால அளவு', te: 'సమయం', mr: 'कालावधी', gu: 'સમયગાળો', kn: 'ಸಮಯಾವಧಿ', pa: 'ਸਮਾਂ', ml: 'കാലാവധി' },
+  severity: { en: 'Severity Scale', hi: 'गंभीरता (1-10)', bn: 'তীব্রতার মাত্রা', ta: 'தீவிர அளவு', te: 'తీవ్రత', mr: 'तीव्रता', gu: 'તીવ્રતા', kn: 'ತೀವ್ರತೆ', pa: 'ਗੰਭੀਰਤਾ', ml: 'തീവ്രത' },
+  character: { en: 'Pain Character', hi: 'दर्द की प्रकृति', bn: 'ব্যথার ধরণ', ta: 'வலியின் தன்மை', te: 'నొప్పి స్వభావం', mr: 'वेदनेचे स्वरूप', gu: 'દુખાવાની પ્રકૃતિ', kn: 'ನೋವಿನ ಸ್ವರೂಪ', pa: 'ਦਰਦ ਦਾ ਸੁਭਾਅ', ml: 'വേദനയുടെ സ്വഭാവം' },
+  radiation: { en: 'Pain Radiation', hi: 'दर्द का फैलाव', bn: 'ব্যথার বিস্তার', ta: 'வலி பரவுதல்', te: 'నొప్పి వ్యాప్తి', mr: 'वेदना पसरणे', gu: 'દુખાવાનો ફેલાવો', kn: 'ನೋವು ಹರಡುವಿಕೆ', pa: 'ਦਰਦ ਦਾ ਫੈਲਾਅ', ml: 'വേദന വ്യാപനം' },
+  associated_symptoms: { en: 'Associated Symptoms', hi: 'संबंधित लक्षण', bn: 'সম্পর্কিত লক্ষণ', ta: 'தொடர்புடைய அறிகுறிகள்', te: 'సంబంధిత లక్షణాలు', mr: 'संबंधित लक्षणे', gu: 'સંબંધિત લક્ષણો', kn: 'ಸಂಬಂಧಿತ ಲಕ್ಷಣಗಳು', pa: 'ਸੰਬੰਧਿਤ ਲੱਛਣ', ml: 'ബന്ധപ്പെട്ട ലക്ഷണങ്ങൾ' },
+  past_history: { en: 'Medical History', hi: 'पिछली बीमारियाँ', bn: 'পূর্বের চিকিৎসার ইতিহাস', ta: 'முந்தைய மருத்துவ வரலாறு', te: 'గత వైద్య చరిత్ర', mr: 'मागील आजार', gu: 'પાછલો મેડિકલ ઇતિહાસ', kn: 'ಹಿಂದಿನ ವೈದ್ಯಕೀಯ ಇತಿಹಾಸ', pa: 'ਪਿਛਲੀ ਮੈਡੀਕਲ ਹਿਸਟਰੀ', ml: 'മുൻകാല രോഗവിവരങ്ങൾ' },
+  medications: { en: 'Current Medications', hi: 'वर्तमान दवाइयाँ', bn: 'বর্তমান ওষুধ', ta: 'தற்போதைய மருந்துகள்', te: 'ప్రస్తుత మందులు', mr: 'चालू औषधे', gu: 'ચાલુ દવાઓ', kn: 'ಪ್ರಸ್ತುತ ಔಷಧಿಗಳು', pa: 'ਮੌਜੂਦਾ ਦਵਾਈਆਂ', ml: 'നിലവിലെ മരുന്നുകൾ' },
+  allergies: { en: 'Allergies', hi: 'एलर्जी', bn: 'অ্যালার্জি', ta: 'ஒவ்வாமை (Allergy)', te: 'అలెర్జీలు', mr: 'अॅलर्जी', gu: 'એલર્જી', kn: 'ಅಲರ್ಜಿಗಳು', pa: 'ਐਲਰਜੀ', ml: 'അലർജി' },
+  ayush: { en: 'AYUSH Assessment', hi: 'दशविध परीक्षा (AYUSH)', bn: 'আয়ুষ পরীক্ষা', ta: 'ஆயுஷ் மதிப்பீடு', te: 'ఆయుష్ పరీక్ష', mr: 'आयुष दशविध परीक्षा', gu: 'આયુષ પ્રકૃતિ', kn: 'ಆಯುಷ್ ಪರೀಕ್ಷೆ', pa: 'ਆਯੁਸ਼ ਪ੍ਰੀਖਿਆ', ml: 'ആയുഷ് പ്രകൃതി' },
+}
+
+export function getLocalizedCategory(catKey, lang = 'en') {
+  if (!catKey) return translations[lang]?.questionOf || 'Question'
+  const key = String(catKey).toLowerCase().replace(/-/g, '_')
+  if (CATEGORY_TRANSLATIONS[key]) {
+    return CATEGORY_TRANSLATIONS[key][lang] || CATEGORY_TRANSLATIONS[key].en
+  }
+  for (const k of Object.keys(CATEGORY_TRANSLATIONS)) {
+    if (key.includes(k)) {
+      return CATEGORY_TRANSLATIONS[k][lang] || CATEGORY_TRANSLATIONS[k].en
+    }
+  }
+  return String(catKey).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 export default translations

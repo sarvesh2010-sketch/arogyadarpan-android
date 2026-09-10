@@ -35,7 +35,8 @@ const navItems = [
   { to: '/patient/interview', label: 'AI Clinical Intake', icon: MessageSquareText },
   { to: '/patient/documents', label: 'Document Intelligence', icon: ScanLine },
   { to: '/patient/document-review', label: 'Medical Timeline', icon: History },
-  { to: '/doctor', label: 'Doctor Review', icon: Stethoscope },
+  { to: '/patient/dashboard', label: 'Patient Dashboard', icon: User },
+  { to: '/doctor/login', label: 'Doctor Portal', icon: Stethoscope },
 ]
 
 function NavRail() {
@@ -102,7 +103,8 @@ export function BottomNav() {
     { to: '/patient/interview', label: 'Intake', icon: MessageSquareText },
     { to: '/patient/documents', label: 'OCR', icon: ScanLine },
     { to: '/patient/document-review', label: 'Timeline', icon: History },
-    { to: '/doctor', label: 'Doctor', icon: Stethoscope },
+    { to: '/patient/dashboard', label: 'Profile', icon: User },
+    { to: '/doctor/login', label: 'Doctor', icon: Stethoscope },
   ]
 
   return (
@@ -130,6 +132,7 @@ export function BottomNav() {
 }
 
 function TopBar({ track, setTrack, patient, isAuthed, onOpenAuth, onLogout }) {
+  const navigate = useNavigate()
   const [showEmergency, setShowEmergency] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { lang, setLanguage, languages } = useLanguage()
@@ -227,6 +230,18 @@ function TopBar({ track, setTrack, patient, isAuthed, onOpenAuth, onLogout }) {
           </option>
         ))}
       </select>
+
+      {/* Doctor Portal Button */}
+      <button
+        onClick={() => navigate('/doctor/login')}
+        aria-label="Doctor Portal"
+        title="Physician Portal & OPD Triage"
+        className="glass-pill px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0"
+      >
+        <Stethoscope className="size-3.5 text-emerald-600" />
+        <span className="hidden sm:inline">Doctor Portal</span>
+        <span className="sm:hidden">Doctor</span>
+      </button>
 
       {/* Emergency Hotline Button */}
       <button

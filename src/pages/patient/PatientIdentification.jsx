@@ -28,6 +28,7 @@ import StitchAppHeader from '../../components/StitchAppHeader'
 import { useLanguage } from '../../context/LanguageContext'
 import {
   generatePatientId,
+  startNewPatientSession,
   saveRegisteredPatient,
   getRegisteredPatients,
   findPatientByIdentifier,
@@ -182,8 +183,7 @@ export default function PatientIdentification() {
           }
 
     setTimeout(() => {
-      saveRegisteredPatient(patientProfile)
-      localStorage.setItem('arogya_patient', JSON.stringify(patientProfile))
+      startNewPatientSession(patientProfile)
       setIsVerifyingAbha(false)
       navigate('/patient/interview')
     }, 700)
@@ -198,8 +198,7 @@ export default function PatientIdentification() {
       registeredAt: new Date().toISOString(),
     }
 
-    saveRegisteredPatient(patientProfile)
-    localStorage.setItem('arogya_patient', JSON.stringify(patientProfile))
+    startNewPatientSession(patientProfile)
     navigate('/patient/interview')
   }
 
@@ -217,7 +216,7 @@ export default function PatientIdentification() {
       isReturningPatient: true,
       lastVisitLoaded: true,
     }
-    localStorage.setItem('arogya_patient', JSON.stringify(activeProfile))
+    startNewPatientSession(activeProfile)
     navigate('/patient/interview')
   }
 

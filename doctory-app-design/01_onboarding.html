@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Doctory - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#191c1e",
+                        "outline": "#75777a",
+                        "on-secondary-fixed": "#171e00",
+                        "on-secondary-fixed-variant": "#3e4c00",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary-fixed": "#1a1c1e",
+                        "on-error-container": "#93000a",
+                        "outline-variant": "#c5c6ca",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#5d5e61",
+                        "secondary-fixed": "#cbf203",
+                        "secondary-container": "#c8ef00",
+                        "background": "#f8f9fb",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#1a1c1c",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#45474a",
+                        "surface-container-highest": "#e1e3e5",
+                        "on-primary-fixed-variant": "#454749",
+                        "inverse-surface": "#2e3133",
+                        "on-tertiary-container": "#838484",
+                        "secondary": "#546500",
+                        "on-secondary-container": "#576a00",
+                        "surface-container": "#eceef0",
+                        "on-primary-container": "#838486",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "surface-dim": "#d8dadc",
+                        "primary-container": "#1a1c1e",
+                        "primary-fixed": "#e2e2e5",
+                        "surface-bright": "#f8f9fb",
+                        "tertiary-fixed": "#e2e2e2",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e1e3e5",
+                        "tertiary": "#000000",
+                        "on-surface": "#191c1e",
+                        "primary-fixed-dim": "#c6c6c9",
+                        "surface": "#f8f9fb",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "inverse-primary": "#c6c6c9",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#b1d400",
+                        "tertiary-fixed-dim": "#c6c6c7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "container-margin-desktop": "64px",
+                        "section-gap": "48px",
+                        "unit": "8px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "caption": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .clay-card {
+            box-shadow: 
+                -10px -10px 20px rgba(255, 255, 255, 0.8),
+                10px 10px 20px rgba(0, 0, 0, 0.05),
+                inset 1px 1px 2px rgba(255,255,255,1);
+        }
+        
+        .clay-button {
+            box-shadow: 
+                -4px -4px 10px rgba(255, 255, 255, 0.1),
+                4px 4px 10px rgba(0, 0, 0, 0.2),
+                inset 1px 1px 2px rgba(255,255,255,0.1);
+        }
+        
+        .swipe-button-container {
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        .swipe-thumb {
+            position: absolute;
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+        
+        .swipe-text {
+            transition: opacity 0.3s;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .bg-gradient-swipe {
+            background: linear-gradient(90deg, #1A1C1E 0%, #000000 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface-container text-on-surface font-body-md antialiased min-h-screen flex flex-col relative overflow-hidden mx-auto max-w-md w-full border-x border-outline-variant/20 shadow-2xl h-[100dvh]">
+<!-- iOS Status Bar (Simulated) -->
+<div class="w-full h-[44px] flex justify-between items-center px-[20px] shrink-0 pt-2 z-50 absolute top-0 left-0 right-0">
+<span class="font-label-md text-on-background text-[15px] font-semibold tracking-normal">9:41</span>
+<div class="flex items-center gap-1.5 text-on-background">
+<span class="material-symbols-outlined text-[16px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+<span class="material-symbols-outlined text-[16px]">battery_full</span>
+</div>
+</div>
+<!-- Dynamic Island Cutout (Simulated) -->
+<div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-[120px] h-[32px] bg-black rounded-full z-50 flex items-center justify-between px-3">
+<div class="w-2 h-2 rounded-full bg-green-500 blur-[1px]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-gray-600/50"></div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col w-full h-full relative pt-[44px]">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center h-16 w-full px-container-margin-mobile relative z-20 shrink-0">
+<div class="h-[1px] bg-outline-variant/40 flex-1"></div>
+<h1 class="font-display text-headline-md text-on-background uppercase tracking-[0.2em] px-4 font-extrabold">DOCTORY</h1>
+<div class="h-[1px] bg-outline-variant/40 flex-1"></div>
+</header>
+<!-- Hero Visual -->
+<div class="flex-1 w-full relative flex flex-col justify-end items-center overflow-hidden z-10 pt-4 -mb-12">
+<!-- Decorative Background Element -->
+<div class="absolute top-10 left-1/2 -translate-x-1/2 w-[300px] h-[300px] rounded-full bg-surface-container-highest/50 blur-3xl -z-10"></div>
+<img alt="Doctor hero image" class="w-[120%] max-w-none object-contain object-bottom -ml-[10%] relative z-10 pointer-events-none drop-shadow-2xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvnvFCMmAEsLm0hiSRneQ-0DNdJlOEIswec4ZI9DsNPM-8mxs64PyeuQv3hyJyQh3tVtWvuNhFrfw5ODDm70L1_tGLZmiyIYYdzWWRw_DJNxeVzJTCYv-x-GdTG6aRrb9LYKlz6Zm874VfqInhvAs1o-uyBUwC_2zD03gXaCnRC-L_bn5P10wiPl6U_O2mznJ1oDbgRNDuW5CMnwRK1wItYBAL1OjTKJWh4OdD3S6fRg0gYsfPgJXRbwNhYg9HWcLVGidF19DZy_s" style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"/>
+</div>
+<!-- Bottom Content Card -->
+<section class="w-full bg-surface-container-lowest rounded-t-[32px] p-container-margin-mobile flex flex-col gap-8 relative z-30 clay-card pb-12 shrink-0">
+<div class="flex flex-col gap-3">
+<h2 class="font-headline-lg-mobile text-on-background max-w-[280px]">
+                    Get Medical Attention To Heal Yourself
+                </h2>
+<p class="font-body-md text-on-surface-variant max-w-[280px]">
+                    Connect with top-tier healthcare professionals instantly.
+                </p>
+</div>
+<!-- Swipe to Start CTA -->
+<div class="w-full h-[72px] bg-gradient-swipe rounded-full swipe-button-container shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-white/10" id="swipeContainer">
+<!-- Thumb -->
+<div class="swipe-thumb w-[64px] h-[64px] bg-[#D2FA18] rounded-full flex items-center justify-center clay-button" id="swipeThumb">
+<span class="material-symbols-outlined text-primary text-[28px] font-bold">keyboard_double_arrow_right</span>
+</div>
+<!-- Text -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<span class="font-label-md text-on-primary uppercase tracking-[0.1em] swipe-text" id="swipeText">Start</span>
+</div>
+</div>
+</section>
+</main>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('swipeContainer');
+            const thumb = document.getElementById('swipeThumb');
+            const text = document.getElementById('swipeText');
+            
+            let isDragging = false;
+            let startX = 0;
+            let currentX = 0;
+            let maxTravel = 0;
+            
+            // Initialization
+            const initSwipe = () => {
+                const containerRect = container.getBoundingClientRect();
+                const thumbRect = thumb.getBoundingClientRect();
+                // 4px left padding, 4px right padding
+                maxTravel = containerRect.width - thumbRect.width - 8; 
+            };
+            
+            window.addEventListener('resize', initSwipe);
+            initSwipe();
+            
+            const onDragStart = (e) => {
+                isDragging = true;
+                startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                thumb.style.transition = 'none';
+            };
+            
+            const onDragMove = (e) => {
+                if (!isDragging) return;
+                
+                const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                currentX = clientX - startX;
+                
+                // Constrain movement
+                if (currentX < 0) currentX = 0;
+                if (currentX > maxTravel) currentX = maxTravel;
+                
+                thumb.style.transform = `translate(${currentX}px, -50%)`;
+                
+                // Fade text based on progress
+                const progress = currentX / maxTravel;
+                text.style.opacity = Math.max(0, 1 - (progress * 2));
+            };
+            
+            const onDragEnd = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                thumb.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                
+                if (currentX > maxTravel * 0.8) {
+                    // Success! Complete the swipe
+                    thumb.style.transform = `translate(${maxTravel}px, -50%)`;
+                    
+                    // Simulate navigation or action
+                    setTimeout(() => {
+                        thumb.innerHTML = '<span class="material-symbols-outlined text-primary text-[28px] font-bold">check</span>';
+                        // Reset after demo
+                        setTimeout(resetSwipe, 1500);
+                    }, 300);
+                } else {
+                    // Snap back
+                    resetSwipe();
+                }
+            };
+            
+            const resetSwipe = () => {
+                thumb.style.transform = `translate(0px, -50%)`;
+                text.style.opacity = '1';
+                currentX = 0;
+                thumb.innerHTML = '<span class="material-symbols-outlined text-primary text-[28px] font-bold">keyboard_double_arrow_right</span>';
+            };
+            
+            // Touch events
+            thumb.addEventListener('touchstart', onDragStart, {passive: true});
+            window.addEventListener('touchmove', onDragMove, {passive: true});
+            window.addEventListener('touchend', onDragEnd);
+            
+            // Mouse events for testing
+            thumb.addEventListener('mousedown', onDragStart);
+            window.addEventListener('mousemove', onDragMove);
+            window.addEventListener('mouseup', onDragEnd);
+        });
+    </script>
+</body></html>
+

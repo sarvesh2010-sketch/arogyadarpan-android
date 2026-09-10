@@ -1,44 +1,71 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowRight, ArrowLeft, Heart, MessageCircle, Volume2, VolumeX, Sun,
-  LogOut, FormInput, ListFilter, CheckSquare, Square, Calendar, Hash, Sparkles,
-  Stethoscope, Leaf, Activity, Zap, RefreshCw
+  ArrowRight,
+  ArrowLeft,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Check,
+  CheckCircle2,
+  RefreshCw,
+  Zap,
+  Activity,
+  FileText,
+  LogOut,
+  Play,
+  Square,
+  Bot,
+  Sparkles,
+  Settings
 } from 'lucide-react'
-import Button from '../../components/Button'
-import Card from '../../components/Card'
-import BionicKioskShell from '../../components/kiosk/BionicKioskShell'
-import { EcgLine } from '../../components/kiosk/Telemetry'
-import { bionicSymptomTiles } from '../../data/bionicData'
-import VoiceRecorder from '../../components/VoiceRecorder'
-import AudioControlsBar from '../../components/AudioControlsBar'
+import StitchAppHeader from '../../components/StitchAppHeader'
 import ConversationalVoiceModal from '../../components/ConversationalVoiceModal'
 import RedFlagAlertModal from '../../components/RedFlagAlertModal'
-import CompletenessTracker from '../../components/CompletenessTracker'
-import ClinicalSignalCard from '../../components/ClinicalSignalCard'
-import SymptomRadarCard from '../../components/SymptomRadarCard'
-import AYUSHModeToggle from '../../components/AYUSHModeToggle'
-import LanguageSelector from '../../components/LanguageSelector'
-import TouchNumericKeypad from '../../components/TouchNumericKeypad'
-import TouchDatePicker from '../../components/TouchDatePicker'
 import SessionTimeoutModal from '../../components/SessionTimeoutModal'
 import ClinicalHistoryFormView from '../../components/ClinicalHistoryFormView'
+import TouchNumericKeypad from '../../components/TouchNumericKeypad'
+import TouchDatePicker from '../../components/TouchDatePicker'
+import LLMConfigModal from '../../components/LLMConfigModal'
 import { useInterview } from '../../hooks/useInterview'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import { useSessionTimeout } from '../../hooks/useSessionTimeout'
 import { useLanguage } from '../../context/LanguageContext'
 import { COMPLAINT_OPTIONS, getLocalizedQuestion, getLocalizedOption } from '../../data/questionBank'
-import { clearPatientSession } from '../../services/sessionStore'
+import { getLocalizedCategory } from '../../data/translations'
+import { clearPatientSession, saveActiveResponses } from '../../services/sessionStore'
 import { normalizeVoiceInput } from '../../services/voiceNormalizationEngine'
 import { evaluateRedFlags } from '../../services/redFlagRules'
+import { speakText, stopSpeech } from '../../services/audioService'
+import { getLLMConfig, generateQuestionsWithLLM } from '../../services/aiQuestionGenerator'
+
+const QUICK_COMPLAINT_CHIPS = [
+  { id: 'knee_pain', label: 'Joint / Knee Pain', labelHi: 'जोड़ों / घुटने में दर्द', icon: '🦵' },
+  { id: 'skin_rash', label: 'Skin Rash / Allergy', labelHi: 'त्वचा / खुजली / दाने', icon: '🩹' },
+  { id: 'eye_problem', label: 'Eye Problem', labelHi: 'आंखों की समस्या', icon: '👁️' },
+  { id: 'ear_throat', label: 'Ear / Throat Pain', labelHi: 'कान / गले में दर्द', icon: '👂' },
+  { id: 'urinary', label: 'Urinary Burning', labelHi: 'पेशाब में जलन', icon: '🚽' },
+  { id: 'dizziness', label: 'Dizziness / Weakness', labelHi: 'चक्कर / कमजोरी', icon: '😵' },
+  { id: 'dental', label: 'Toothache', labelHi: 'दांत में दर्द', icon: '🦷' },
+  { id: 'diabetes', label: 'Sugar / BP Check', labelHi: 'शुगर / बीपी जांच', icon: '🩸' },
+]
 
 export default function InterviewScreen() {
   const navigate = useNavigate()
-  const { lang, t, speechLocale, currentLanguageMeta } = useLanguage()
+  const { lang, t, speechLocale } = useLanguage()
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [showFullForm, setShowFullForm] = useState(false)
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false)
+  const [showOtherComplaints, setShowOtherComplaints] = useState(false)
+  const [customComplaintInput, setCustomComplaintInput] = useState('')
+  const [selectedQuickChip, setSelectedQuickChip] = useState(null)
+  const [isPlayingRecordedAudio, setIsPlayingRecordedAudio] = useState(false)
+  const [showLLMModal, setShowLLMModal] = useState(false)
+  const [activeLLMConfig, setActiveLLMConfig] = useState(() => getLLMConfig())
+  const [isGeneratingAIQuestions, setIsGeneratingAIQuestions] = useState(false)
+  const recordedAudioRef = useRef(null)
 
   const {
     currentQuestion,
@@ -46,13 +73,10 @@ export default function InterviewScreen() {
     totalQuestions,
     responses,
     isComplete,
-    completeness,
-    completenessPercent,
     triageData,
     mode,
     setMode,
     isLowLiteracy,
-    setIsLowLiteracy,
     submitResponse,
     nextQuestion,
     previousQuestion,
@@ -65,9 +89,8 @@ export default function InterviewScreen() {
   const [dropdownValue, setDropdownValue] = useState('')
   const [dateValue, setDateValue] = useState('')
 
-  // Speech Rate & Volume States for Accessible TTS (elderly & low-literacy)
-  const [speechRate, setSpeechRate] = useState(isLowLiteracy ? 0.75 : 0.92)
-  const [volume, setVolume] = useState(1.0)
+  // Accessible speech rate
+  const [speechRate] = useState(isLowLiteracy ? 0.82 : 0.95)
 
   // Conversational Voice AI Modal & Red-Flag States
   const [showConversationalModal, setShowConversationalModal] = useState(false)
@@ -105,6 +128,10 @@ export default function InterviewScreen() {
   const handleVoiceResult = useCallback((transcriptText) => {
     setTextInput(prev => (prev ? prev + ' ' + transcriptText : transcriptText).trim())
 
+    if (currentQuestion?.type === 'complaint_select') {
+      setCustomComplaintInput(transcriptText)
+    }
+
     if (currentQuestion) {
       const norm = normalizeVoiceInput(transcriptText, currentQuestion)
       if (norm && norm.confidence >= 0.88 && norm.structuredValue !== undefined && norm.matchedOption) {
@@ -115,7 +142,12 @@ export default function InterviewScreen() {
           explanation: norm.explanation
         })
 
-        if (currentQuestion.type === 'yes_no' || currentQuestion.type === 'complaint_select' || currentQuestion.type === 'single_select' || currentQuestion.type === 'dropdown') {
+        if (
+          currentQuestion.type === 'yes_no' ||
+          currentQuestion.type === 'complaint_select' ||
+          currentQuestion.type === 'single_select' ||
+          currentQuestion.type === 'dropdown'
+        ) {
           submitResponse(currentQuestion.id, transcriptText, norm.structuredValue, 'voice')
           setTimeout(() => {
             setVoiceMatchStatus(null)
@@ -126,6 +158,9 @@ export default function InterviewScreen() {
         } else if (currentQuestion.type === 'multi_select') {
           setSelectedOptions(Array.isArray(norm.structuredValue) ? norm.structuredValue : [norm.structuredValue])
         }
+      } else if (currentQuestion.type === 'complaint_select' && transcriptText.trim()) {
+        // Freeform complaint spoken without direct option match -> show in other complaints
+        setShowOtherComplaints(true)
       }
     }
   }, [currentQuestion, submitResponse, nextQuestion])
@@ -135,7 +170,8 @@ export default function InterviewScreen() {
     transcript,
     interimTranscript,
     isSupported,
-    error,
+    error: voiceError,
+    recordedAudioUrl,
     startListening,
     stopListening,
   } = useVoiceInput({
@@ -145,77 +181,90 @@ export default function InterviewScreen() {
 
   useEffect(() => {
     return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
+      stopSpeech()
+      if (recordedAudioRef.current) {
+        recordedAudioRef.current.pause()
       }
     }
   }, [])
 
   // Sync state when question changes
   useEffect(() => {
+    stopSpeech()
+    setIsSpeaking(false)
     setTextInput('')
     setNumberInput('')
     setSelectedOptions([])
     setDropdownValue('')
     setDateValue('')
+    setVoiceMatchStatus(null)
   }, [currentQuestion?.id])
 
-  // Dynamic Multi-Language Speech Synthesis (TTS)
-  const handleReadAloud = (customRate = speechRate, customVol = volume) => {
-    if (!currentQuestion || !('speechSynthesis' in window)) return
+  // Playback recorded audio snippet
+  const handleTogglePlayRecordedAudio = () => {
+    if (!recordedAudioUrl) return
+
+    if (isPlayingRecordedAudio) {
+      recordedAudioRef.current?.pause()
+      setIsPlayingRecordedAudio(false)
+    } else {
+      stopSpeech()
+      setIsSpeaking(false)
+      const audio = new Audio(recordedAudioUrl)
+      recordedAudioRef.current = audio
+      audio.onended = () => setIsPlayingRecordedAudio(false)
+      audio.onerror = () => setIsPlayingRecordedAudio(false)
+      audio.play()
+      setIsPlayingRecordedAudio(true)
+    }
+  }
+
+  // Multi-Language Text-to-Speech (TTS) Read Aloud
+  const handleReadAloud = () => {
+    if (!currentQuestion) return
 
     if (isSpeaking) {
-      window.speechSynthesis.cancel()
+      stopSpeech()
       setIsSpeaking(false)
       return
     }
 
+    if (recordedAudioRef.current) {
+      recordedAudioRef.current.pause()
+      setIsPlayingRecordedAudio(false)
+    }
+
     const questionToSpeak = getLocalizedQuestion(currentQuestion, lang)
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(questionToSpeak)
-    utterance.rate = customRate
-    utterance.volume = customVol
-    utterance.lang = speechLocale
-
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-
-    setIsSpeaking(true)
-    window.speechSynthesis.speak(utterance)
+    speakText(questionToSpeak, {
+      lang: speechLocale,
+      rate: speechRate,
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    })
   }
 
   // Handle Free Conversational Natural Speech AI Intake
   const handleApplyConversationalIntake = (intakeData) => {
     if (!intakeData) return
 
-    // 1. Primary complaint
     if (intakeData.primaryComplaint?.id) {
       submitResponse('chief_complaint', intakeData.rawTranscript, intakeData.primaryComplaint.id, 'voice')
     }
-
-    // 2. Duration / Onset
     if (intakeData.duration) {
       submitResponse('socrates_onset', intakeData.duration, intakeData.duration, 'voice')
     }
-
-    // 3. Associated symptoms
     if (intakeData.associatedSymptoms && intakeData.associatedSymptoms.length > 0) {
       const symVals = intakeData.associatedSymptoms.map(s => s.id)
       submitResponse('socrates_associations', intakeData.associatedSymptoms.map(s => s.label).join(', '), symVals, 'voice')
     }
-
-    // 4. Severity
     if (intakeData.severity) {
       submitResponse('socrates_severity', String(intakeData.severity), intakeData.severity, 'voice')
     }
-
-    // 5. Current medications if detected
     if (intakeData.medications && intakeData.medications.length > 0) {
       const medStr = intakeData.medications.map(m => `${m.medication} ${m.dose || ''}`).join(', ')
       submitResponse('current_medications', medStr, medStr, 'voice')
     }
-
-    // 6. Diseases if detected
     if (intakeData.diseases && intakeData.diseases.length > 0) {
       const disList = intakeData.diseases.map(d => d.name)
       submitResponse('past_medical', disList.join(', '), disList, 'voice')
@@ -225,129 +274,20 @@ export default function InterviewScreen() {
     setTimeout(nextQuestion, 500)
   }
 
-  // Auto-save responses to localStorage whenever updated
+  // Auto-save responses to localStorage & sessionStore whenever updated
   useEffect(() => {
     if (responses.length > 0) {
-      localStorage.setItem('arogya_responses', JSON.stringify(responses))
-      localStorage.setItem('arogya_triage', JSON.stringify(triageData))
+      try {
+        saveActiveResponses(responses)
+        localStorage.setItem('arogya_triage', JSON.stringify(triageData))
+      } catch { /* ignore */ }
     }
   }, [responses, triageData])
 
   const handleEndSession = () => {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    stopSpeech()
     clearPatientSession()
     navigate('/')
-  }
-
-  // If intake is complete, render an interactive summary rather than a blank or redirect screen
-  if (isComplete) {
-    const chiefVal = responses.find(r => r.questionId === 'chief_complaint')?.structuredValue || 'General Consultation'
-    return (
-      <BionicKioskShell
-        activeTrack={mode === 'ayush' ? 'ayush' : 'modern'}
-        onTrackChange={(newTrack) => setMode(newTrack === 'ayush' ? 'ayush' : 'allopathic')}
-      >
-        <div className="max-w-2xl mx-auto py-6 sm:py-10 text-center select-none space-y-6">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="size-20 rounded-3xl bg-gradient-to-tr from-emerald to-teal-700 flex items-center justify-center mx-auto text-white shadow-lg shadow-emerald-600/25"
-          >
-            <CheckSquare className="size-10" />
-          </motion.div>
-
-          <div>
-            <span className="status-chip bg-emerald-soft text-emerald font-bold mb-2">
-              Clinical Intake Completed • 100%
-            </span>
-            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-              Clinical Intake Responses Saved
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto mt-1">
-              Your symptoms and clinical history have been synthesized by AI and prepared for your physician.
-            </p>
-          </div>
-
-          {/* Quick Summary Card */}
-          <div className="glass-card p-4 sm:p-6 bg-white border border-slate-200/80 shadow-xs rounded-2xl text-left space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Intake Summary
-              </span>
-              <span className="text-xs font-bold text-cobalt font-mono">
-                {responses.length} Question{responses.length !== 1 ? 's' : ''} Answered
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-400 block text-[10px] font-bold uppercase">Chief Complaint</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block capitalize">
-                  {String(chiefVal).replace(/_/g, ' ')}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-400 block text-[10px] font-bold uppercase">Triage Status</span>
-                <span className="font-bold text-emerald text-sm mt-0.5 block">
-                  {triageData?.priority === 'critical' ? '⚠️ Priority Review Required' : '✓ Standard Triage Ready'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                resetInterview()
-              }}
-              className="btn-bionic-outline w-full sm:w-auto px-6 py-3.5 rounded-full text-xs sm:text-sm font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <RefreshCw className="size-4" />
-              <span>Retake / Edit Intake</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/patient/documents')}
-              className="btn-bionic w-full sm:w-auto px-7 py-3.5 rounded-full text-white text-xs sm:text-sm font-bold shadow-cobalt flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Continue to OCR Scanner</span>
-              <ArrowRight className="size-4" />
-            </button>
-          </div>
-        </div>
-      </BionicKioskShell>
-    )
-  }
-
-  // Graceful fallback if no question is active
-  if (!currentQuestion) {
-    return (
-      <BionicKioskShell
-        activeTrack={mode === 'ayush' ? 'ayush' : 'modern'}
-        onTrackChange={(newTrack) => setMode(newTrack === 'ayush' ? 'ayush' : 'allopathic')}
-      >
-        <div className="max-w-md mx-auto py-12 text-center select-none space-y-4">
-          <div className="size-16 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
-            <Activity className="size-8" />
-          </div>
-          <h2 className="font-heading font-bold text-lg text-slate-900">
-            Intake Session
-          </h2>
-          <p className="text-xs text-slate-500">
-            Ready to start your clinical intake interview.
-          </p>
-          <button
-            onClick={() => resetInterview()}
-            className="btn-bionic px-6 py-3 rounded-full text-white text-xs font-bold shadow-cobalt mx-auto"
-          >
-            Start Intake Questionnaire
-          </button>
-        </div>
-      </BionicKioskShell>
-    )
   }
 
   const handleSelectOption = (value) => {
@@ -383,421 +323,804 @@ export default function InterviewScreen() {
     nextQuestion()
   }
 
+  const handleCustomComplaintSubmit = async (complaintVal) => {
+    const finalVal = (complaintVal || customComplaintInput || '').trim()
+    if (!finalVal) return
+
+    const config = getLLMConfig()
+    if (config.provider !== 'clinical_offline' && (config.apiKey || config.provider === 'custom')) {
+      setIsGeneratingAIQuestions(true)
+      try {
+        await generateQuestionsWithLLM(finalVal, lang)
+      } catch (err) {
+        console.warn('AI question generation error:', err)
+      } finally {
+        setIsGeneratingAIQuestions(false)
+      }
+    }
+
+    submitResponse('chief_complaint', finalVal, finalVal, 'touch')
+    setCustomComplaintInput('')
+    setSelectedQuickChip(null)
+    setTimeout(nextQuestion, 250)
+  }
+
   const handleComplaintSelect = (complaintId) => {
+    if (complaintId === 'other') {
+      setShowOtherComplaints(true)
+      return
+    }
     submitResponse('chief_complaint', '', complaintId, 'touch')
     setTextInput('')
     setTimeout(nextQuestion, 250)
   }
 
-  const questionText = getLocalizedQuestion(currentQuestion, lang)
+  // ──────────────────────────────────────────────
+  // Completion Screen (Fully Localized)
+  // ──────────────────────────────────────────────
+  if (isComplete) {
+    const chiefVal = responses.find(r => r.questionId === 'chief_complaint')?.structuredValue || 'General'
+    return (
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col select-none">
+        <StitchAppHeader title="healthInterview" showBack onBack={() => navigate('/')} />
 
-  return (
-    <BionicKioskShell
-      activeTrack={mode === 'ayush' ? 'ayush' : 'modern'}
-      onTrackChange={(newTrack) => setMode(newTrack === 'ayush' ? 'ayush' : 'allopathic')}
-    >
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 select-none">
-        {/* ── Left Column: Clinical Questionnaire (7 cols) ── */}
-        <section className="xl:col-span-7 flex flex-col justify-between">
-          <div>
-            {/* Top Title & Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div>
-                <h1 className="font-heading text-xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
-                  Clinical Intake{' '}
-                  <span className="rounded-xl sm:rounded-2xl bg-lime px-2 sm:px-3 py-0.5 text-lime-ink inline-block text-lg sm:text-2xl md:text-3xl font-bold shadow-xs">
-                    Interview
-                  </span>
-                </h1>
-                <p className="mt-1 text-xs text-slate-500 font-medium">
-                  {mode === 'ayush'
-                    ? '🌿 AYUSH Track • Dashavidha Pariksha protocol'
-                    : '🩺 Allopathic Protocol • SOCRATES pain assessment'}
-                </p>
-              </div>
+        <main className="flex-1 max-w-xl w-full mx-auto px-4 py-8 flex flex-col justify-center text-center space-y-6">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="size-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-sm"
+          >
+            <CheckCircle2 className="size-8" />
+          </motion.div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowFullForm(!showFullForm)}
-                  className="glass-pill px-3 py-1.5 text-xs font-bold text-cobalt border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
-                >
-                  {showFullForm ? 'Step View' : 'Full Form'}
-                </button>
-                <button
-                  onClick={() => setIsLowLiteracy(!isLowLiteracy)}
-                  className={`glass-pill px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                    isLowLiteracy ? 'bg-amber text-slate-900' : 'text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  {isLowLiteracy ? '☀️ Large Font ON' : '☀️ Large Font'}
-                </button>
-              </div>
-            </div>
-
-            {/* FULL FORM VIEW OVERLAY */}
-            {showFullForm ? (
-              <div className="glass-card p-5 bg-white border border-slate-200/80 shadow-xs max-h-[68vh] overflow-y-auto">
-                <ClinicalHistoryFormView
-                  responses={responses}
-                  onUpdateResponse={(qId, val) => submitResponse(qId, '', val, 'form_edit')}
-                  onClose={() => setShowFullForm(false)}
-                />
-              </div>
-            ) : (
-              /* STEP QUESTION CARD */
-              <motion.div
-                key={currentQuestion.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.22 }}
-                className="glass-card p-3 sm:p-5 md:p-6 bg-white border border-slate-200/80 shadow-xs rounded-2xl"
-              >
-                {/* Section Badge & Question Counter */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="status-chip bg-cobalt-soft text-cobalt font-bold text-[10px] sm:text-[11px]">
-                    {(currentQuestion.category || currentQuestion.section || 'QUESTION').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400">
-                      {currentIndex + 1} / {totalQuestions}
-                    </span>
-                    <div className="w-16 sm:w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-cobalt rounded-full transition-all duration-300"
-                        style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Question Prompt */}
-                <h2 className="text-base sm:text-xl md:text-2xl font-bold text-slate-900 font-heading mb-1 leading-snug">
-                  {questionText}
-                </h2>
-                {(currentQuestion.hindi || currentQuestion.questionHi) && (
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium mb-5">
-                    {currentQuestion.hindi || currentQuestion.questionHi}
-                  </p>
-                )}
-
-                {/* 1. COMPLAINT SELECTION WITH BIONIC TOUCH TILES */}
-                {currentQuestion.type === 'complaint_select' && (
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Touch to answer • स्पर्श करें
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {bionicSymptomTiles.map((tile) => (
-                        <button
-                          key={tile.id}
-                          type="button"
-                          onClick={() =>
-                            handleComplaintSelect(
-                              tile.id === 'chest'
-                                ? 'chest_pain'
-                                : tile.id === 'fever'
-                                ? 'fever'
-                                : tile.id === 'breath'
-                                ? 'breathing'
-                                : tile.id === 'headache'
-                                ? 'headache'
-                                : tile.id === 'stomach'
-                                ? 'stomach_pain'
-                                : 'cough'
-                            )
-                          }
-                          className="glass-card tile-lift p-3 sm:p-3.5 text-left border border-slate-200/80 bg-white hover:border-cobalt transition-all cursor-pointer shadow-xs flex flex-col justify-between h-24 sm:h-28"
-                        >
-                          <span className="flex size-9 items-center justify-center rounded-xl bg-cobalt-soft text-cobalt">
-                            <Activity className="size-4" />
-                          </span>
-                          <div>
-                            <span className="block text-xs sm:text-sm font-bold text-slate-900">
-                              {tile.en}
-                            </span>
-                            <span className="block text-[11px] text-slate-500 font-medium">
-                              {tile.hi}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Additional Complaints */}
-                    <div className="pt-2 border-t border-slate-100">
-                      <p className="text-[11px] font-bold text-slate-400 mb-2">OTHER COMPLAINTS:</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {COMPLAINT_OPTIONS.filter((c) => !['chest_pain', 'fever', 'breathing', 'headache', 'stomach_pain', 'cough'].includes(c.id)).map((opt) => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => handleComplaintSelect(opt.id)}
-                            className="glass-card tile-lift p-2.5 text-left text-xs font-bold text-slate-800 border border-slate-200/70 hover:border-cobalt transition cursor-pointer"
-                          >
-                            <span className="text-base mr-1.5">{opt.icon}</span>
-                            {opt.labels && opt.labels[lang] ? opt.labels[lang] : opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. SCALE / PAIN SEVERITY SLIDER */}
-                {(currentQuestion.type === 'scale' || currentQuestion.id === 'pain_severity' || currentQuestion.id === 'socrates_severity') && (
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
-                    <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                      <span>1 • Mild / हल्का</span>
-                      <span className="text-sm font-black text-white px-3 py-1 rounded-full bg-cobalt shadow-cobalt">
-                        {numberInput || '5'} / 10
-                      </span>
-                      <span>10 • Worst / असहनीय</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={10}
-                      value={numberInput || 5}
-                      onChange={(e) => setNumberInput(e.target.value)}
-                      className="w-full accent-[var(--cobalt)] cursor-pointer h-2.5 bg-slate-200 rounded-lg"
-                      aria-label="Pain severity slider"
-                    />
-                    <div className="flex justify-end pt-1">
-                      <Button
-                        size="md"
-                        onClick={() => handleSelectOption(String(Math.min(10, Math.max(1, parseInt(numberInput, 10) || 5))))}
-                        className="bg-cobalt text-white shadow-cobalt font-bold text-xs"
-                      >
-                        Confirm Severity ({Math.min(10, Math.max(1, parseInt(numberInput, 10) || 5))}/10)
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. YES / NO BUTTONS */}
-                {currentQuestion.type === 'yes_no' && (
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center py-3 sm:py-4">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectOption('yes')}
-                      className="glass-card tile-lift w-full sm:flex-1 sm:max-w-[180px] py-3.5 sm:py-4 rounded-2xl text-center font-bold text-base bg-emerald-soft text-emerald border border-emerald/30 hover:bg-emerald hover:text-white transition cursor-pointer"
-                    >
-                      {t('yes', 'Yes / हाँ')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectOption('no')}
-                      className="glass-card tile-lift w-full sm:flex-1 sm:max-w-[180px] py-3.5 sm:py-4 rounded-2xl text-center font-bold text-base bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-800 hover:text-white transition cursor-pointer"
-                    >
-                      {t('no', 'No / नहीं')}
-                    </button>
-                  </div>
-                )}
-
-                {/* 4. SINGLE SELECT OPTIONS */}
-                {currentQuestion.type === 'single_select' && currentQuestion.options && (
-                  <div className="space-y-2">
-                    {currentQuestion.options.map((opt) => {
-                      const optLabel = getLocalizedOption(opt, lang)
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handleSelectOption(opt.value)}
-                          className="glass-card tile-lift w-full p-3.5 text-left border border-slate-200/80 bg-white hover:border-cobalt transition-all cursor-pointer flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-800"
-                        >
-                          <span>{optLabel}</span>
-                          <span className="flex size-6 items-center justify-center rounded-full bg-slate-100 text-slate-400 group-hover:bg-cobalt group-hover:text-white">
-                            <ArrowRight className="size-3.5" />
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* 5. MULTI-SELECT OPTIONS */}
-                {currentQuestion.type === 'multi_select' && currentQuestion.options && (
-                  <div className="space-y-2">
-                    {currentQuestion.options.map((opt) => {
-                      const optLabel = getLocalizedOption(opt, lang)
-                      const isSelected = selectedOptions.includes(opt.value)
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handleSelectOption(opt.value)}
-                          className={`glass-card tile-lift w-full p-3.5 text-left transition-all cursor-pointer flex items-center justify-between text-xs sm:text-sm font-semibold ${
-                            isSelected
-                              ? 'bg-cobalt-soft border-cobalt text-cobalt ring-1 ring-cobalt/30'
-                              : 'border-slate-200/80 bg-white text-slate-800 hover:border-slate-300'
-                          }`}
-                        >
-                          <span>{optLabel}</span>
-                          <span
-                            className={`flex size-5 items-center justify-center rounded-md border ${
-                              isSelected ? 'bg-cobalt border-cobalt text-white' : 'border-slate-300 bg-white'
-                            }`}
-                          >
-                            {isSelected && <CheckSquare className="size-3.5" />}
-                          </span>
-                        </button>
-                      )
-                    })}
-                    <div className="flex justify-end pt-3">
-                      <Button
-                        size="md"
-                        onClick={handleSubmitCurrent}
-                        disabled={selectedOptions.length === 0}
-                        className="bg-cobalt text-white shadow-cobalt font-bold text-xs"
-                      >
-                        {t('confirm', 'Confirm Selections')} ({selectedOptions.length})
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. NUMERIC KEYPAD */}
-                {(currentQuestion.type === 'number' || currentQuestion.type === 'numeric_touch') && (
-                  <div className="space-y-4">
-                    <TouchNumericKeypad
-                      value={numberInput}
-                      onChange={setNumberInput}
-                      onSubmit={handleSubmitCurrent}
-                      label={questionText}
-                      unit={currentQuestion.unit || ''}
-                    />
-                  </div>
-                )}
-
-                {/* 7. DATE PICKER */}
-                {currentQuestion.type === 'date' && (
-                  <div className="space-y-4">
-                    <TouchDatePicker
-                      value={dateValue}
-                      onChange={setDateValue}
-                      onSubmit={handleSubmitCurrent}
-                    />
-                  </div>
-                )}
-
-                {/* 8. FREE TEXT INPUT */}
-                {currentQuestion.type === 'text' && (
-                  <div className="space-y-3">
-                    <textarea
-                      rows={3}
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      placeholder="Type details or speak into the microphone on the right..."
-                      className="w-full p-3 rounded-2xl border border-slate-200 text-xs sm:text-sm outline-none focus:border-cobalt"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="md"
-                        onClick={handleSubmitCurrent}
-                        disabled={!textInput.trim()}
-                        className="bg-cobalt text-white shadow-cobalt font-bold text-xs"
-                      >
-                        {t('submit', 'Submit Answer')}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Controls Bar at bottom of card */}
-                <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={isSpeaking ? VolumeX : Volume2}
-                      onClick={handleReadAloud}
-                      className={isSpeaking ? 'text-cobalt bg-cobalt-soft text-xs' : 'text-xs text-slate-600'}
-                    >
-                      <span>{isSpeaking ? t('stopAudio', 'Stop') : t('readAloud', 'Listen')}</span>
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={previousQuestion}
-                      disabled={currentIndex === 0}
-                      className="glass-pill px-3 py-1.5 text-xs font-bold text-slate-600 border border-slate-200 disabled:opacity-40 cursor-pointer hover:bg-slate-50"
-                    >
-                      ← {t('back', 'Back')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        submitResponse(currentQuestion.id, '', null, 'skipped')
-                        nextQuestion()
-                      }}
-                      className="glass-pill px-3 py-1.5 text-xs font-bold text-slate-400 border border-slate-200 cursor-pointer hover:text-slate-600"
-                    >
-                      {t('skip', 'Skip')}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </section>
-
-        {/* ── Right Column: Voice Assistant & Telemetry Panel (5 cols) ── */}
-        <section className="xl:col-span-5 space-y-4 flex flex-col justify-between">
-          {/* Bionic Voice Assistant Card */}
-          <div className="glass-card p-5 bg-white border border-slate-200/80 shadow-xs flex flex-col items-center text-center">
-            <span className="status-chip bg-cobalt-soft text-cobalt mb-2 font-bold text-[10px]">
-              AI VOICE ASSISTANT
-            </span>
-            <h3 className="text-base font-bold text-slate-900 font-heading">
-              Speak in Hindi or English
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Natural speech recognition with Indian code-switching support
+          <div className="space-y-1.5">
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold text-slate-900">
+              {t('complete', 'Intake Completed')}
+            </h1>
+            <p className="text-sm text-slate-600 max-w-md mx-auto">
+              {t('completeMessage', 'Your health information has been organized and is ready for your doctor.')}
             </p>
+          </div>
 
-            {/* Pulsing Microphone Waveform Component */}
-            <div className="my-4 w-full flex justify-center">
-              <VoiceRecorder
-                isListening={isListening}
-                isSupported={isSupported}
-                transcript={transcript}
-                interimTranscript={interimTranscript}
-                onStart={startListening}
-                onStop={stopListening}
-                error={error}
-                className="w-full"
-              />
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 text-left shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('summary', 'Summary')}</span>
+              <span className="text-xs font-medium text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+                {responses.length} {t('itemsFound', 'Questions Answered')}
+              </span>
             </div>
 
-            {/* Voice Normalization Match Badge */}
-            {voiceMatchStatus && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full bg-emerald-soft border border-emerald/30 text-emerald-900 p-2.5 rounded-xl text-left text-xs mb-3"
-              >
-                <div className="flex items-center gap-1.5 font-bold">
-                  <span className="size-2 rounded-full bg-emerald animate-ping" />
-                  <span>Voice Matched:</span>
-                </div>
-                <p className="mt-0.5 text-[11px] truncate">"{voiceMatchStatus.heard}" → {voiceMatchStatus.normalized}</p>
-              </motion.div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-slate-400 block text-[11px] font-medium">{t('chiefComplaint', 'Chief Complaint')}</span>
+                <span className="font-bold text-slate-900 text-sm mt-0.5 block capitalize">
+                  {String(chiefVal).replace(/_/g, ' ')}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-slate-400 block text-[11px] font-medium">{t('clinicalAttention', 'Triage Status')}</span>
+                <span className={`text-sm font-bold mt-0.5 block ${triageData?.priority === 'critical' ? 'text-red-600' : 'text-emerald-700'}`}>
+                  {triageData?.priority === 'critical' ? `⚠️ ${t('priorityReview', 'Priority Review')}` : `✓ ${t('readyForConsultation', 'Standard Ready')}`}
+                </span>
+              </div>
+            </div>
+          </div>
 
-            {/* Conversational Voice AI Trigger Button */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
-              onClick={() => setShowConversationalModal(true)}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cobalt to-cobalt-deep text-white text-xs font-bold shadow-cobalt hover:brightness-110 transition cursor-pointer flex items-center justify-center gap-1.5"
+              type="button"
+              onClick={resetInterview}
+              className="px-5 py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <Zap className="size-4" />
-              <span>Free-Flow Voice Conversation</span>
+              <RefreshCw className="size-4" />
+              <span>{t('edit', 'Edit Answers')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/patient/documents')}
+              className="px-6 py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>{t('uploadDocuments', 'Continue to Documents')}</span>
+              <ArrowRight className="size-4" />
             </button>
           </div>
-        </section>
+        </main>
       </div>
+    )
+  }
+
+  // Graceful fallback if no question is active
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col select-none">
+        <StitchAppHeader title="healthInterview" showBack onBack={() => navigate('/')} />
+        <main className="flex-1 max-w-md w-full mx-auto px-4 py-16 text-center space-y-4">
+          <Activity className="size-10 text-teal-600 mx-auto" />
+          <h2 className="font-heading font-bold text-lg text-slate-900">{t('healthInterview', 'Clinical Intake')}</h2>
+          <button
+            onClick={resetInterview}
+            className="px-6 py-2.5 rounded-xl bg-teal-700 text-white font-medium text-sm shadow-sm cursor-pointer"
+          >
+            {t('startFresh', 'Start Questions')}
+          </button>
+        </main>
+      </div>
+    )
+  }
+
+  // Dynamic multilingual question text: primary in chosen language, secondary reference in English/Hindi
+  const questionText = getLocalizedQuestion(currentQuestion, lang)
+  const secondaryQuestionText = lang !== 'en'
+    ? currentQuestion.question
+    : (currentQuestion.hindi || currentQuestion.questionHi)
+
+  // Localized Category
+  const categoryLabel = getLocalizedCategory(currentQuestion.category || currentQuestion.section, lang)
+
+  // Prominent complaints list
+  const primaryComplaints = COMPLAINT_OPTIONS.slice(0, 6)
+  const otherComplaints = COMPLAINT_OPTIONS.slice(6)
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col select-none">
+      <StitchAppHeader
+        title="healthInterview"
+        showBack
+        onBack={() => setShowEndSessionConfirm(true)}
+      />
+
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 flex flex-col justify-between">
+        <div className="space-y-4">
+          {/* Top Progress & Toolbar */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
+                {categoryLabel}
+              </span>
+              <span className="text-xs text-slate-500 font-medium">
+                {t('questionOf', 'Question')} {currentIndex + 1} / {totalQuestions}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Conversational Voice AI Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowConversationalModal(true)}
+                className="px-2.5 py-1 rounded-full text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
+                title="Speak symptoms to Conversational AI"
+              >
+                <Mic className="size-3 text-teal-700 animate-pulse" />
+                <span>{lang === 'hi' ? 'संवादी एआई' : 'Voice AI'}</span>
+              </button>
+
+              {/* AYUSH Track switch */}
+              <button
+                onClick={() => setMode(mode === 'ayush' ? 'allopathic' : 'ayush')}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer flex items-center gap-1 ${
+                  mode === 'ayush'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+                title="Toggle AYUSH / Allopathic Track"
+              >
+                <span>{mode === 'ayush' ? t('ayushTrack', '🌿 AYUSH') : t('allopathicTrack', '🩺 Allopathic')}</span>
+              </button>
+
+              {/* Full Form toggle */}
+              <button
+                onClick={() => setShowFullForm(!showFullForm)}
+                className="px-2.5 py-1 rounded-full text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition cursor-pointer flex items-center gap-1"
+                title="Review all answers"
+              >
+                <FileText className="size-3.5" />
+                <span>{showFullForm ? t('stepView', 'Step View') : t('allAnswers', 'All Answers')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Minimalist Progress Bar */}
+          <div className="w-full h-1.5 bg-slate-200/70 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-teal-600 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
+            />
+          </div>
+
+          {/* FULL FORM VIEW OVERLAY */}
+          {showFullForm ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 max-h-[70vh] overflow-y-auto">
+              <ClinicalHistoryFormView
+                responses={responses}
+                onUpdateResponse={(qId, val) => submitResponse(qId, '', val, 'form_edit')}
+                onClose={() => setShowFullForm(false)}
+              />
+            </div>
+          ) : (
+            /* STEP QUESTION CARD (Fully Localized & Clean) */
+            <motion.div
+              key={currentQuestion.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-6"
+            >
+              {/* Question Header & TTS Read Aloud */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 font-heading leading-snug">
+                    {questionText}
+                  </h2>
+                  {secondaryQuestionText && secondaryQuestionText !== questionText && (
+                    <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                      {secondaryQuestionText}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleReadAloud}
+                  className={`shrink-0 px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 text-xs font-medium shadow-2xs ${
+                    isSpeaking
+                      ? 'bg-teal-600 text-white border-teal-600 animate-pulse ring-2 ring-teal-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                  title="Listen to question"
+                >
+                  {isSpeaking ? <VolumeX className="size-4" /> : <Volume2 className="size-4 text-teal-700" />}
+                  <span>{isSpeaking ? t('stop', 'Stop') : t('listen', 'Listen')}</span>
+                </button>
+              </div>
+
+              {/* ──────────────────────────────────
+                  1. COMPLAINT SELECT (Multilingual Grid + Custom Typing)
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'complaint_select' && (
+                <div className="space-y-3.5">
+                  {/* Hero Conversational AI Intake Banner */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => setShowConversationalModal(true)}
+                    className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 text-white shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-between gap-3 group active:scale-[0.99] border border-teal-600/40"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-2xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-200 shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                        <Mic className="size-5 text-teal-300 animate-pulse" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-heading font-bold text-xs sm:text-sm text-white">
+                            {lang === 'hi' ? 'बोलकर अपने लक्षण बताएं (Conversational Voice AI)' : 'Tell Symptoms with Conversational AI'}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-teal-400/20 text-teal-200 border border-teal-400/30 font-mono text-[9px] font-bold uppercase">
+                            10 Languages
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-teal-100/80 truncate mt-0.5">
+                          {lang === 'hi'
+                            ? 'हिन्दी, বাংলা, தமிழ், తెలుగు, मराठी, ગુજરાતી, ಕನ್ನಡ, ਪੰਜਾਬੀ, മലയാളം, English में बोलें'
+                            : 'Speak freely in Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Punjabi, Malayalam or English'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="px-3 py-1.5 rounded-xl bg-teal-500/20 group-hover:bg-teal-500/30 border border-teal-400/40 text-teal-200 text-xs font-bold shrink-0 flex items-center gap-1 transition">
+                      <Sparkles className="size-3.5 text-teal-300" />
+                      <span className="hidden sm:inline">Start Voice</span>
+                    </div>
+                  </motion.div>
+
+                  {/* Primary 6 Prominent Complaints */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {primaryComplaints.map((opt) => {
+                      const nativeLabel = opt.labels && opt.labels[lang] ? opt.labels[lang] : opt.label
+                      const subLabel = lang !== 'en' ? opt.label : (opt.labels?.hi || '')
+
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handleComplaintSelect(opt.id)}
+                          className="p-3 text-left border border-slate-200/90 rounded-2xl bg-white hover:border-teal-500 hover:bg-teal-50/20 active:scale-[0.98] transition-all cursor-pointer shadow-2xs flex flex-col justify-between h-24 group"
+                        >
+                          <span className="text-2xl w-9 h-9 rounded-xl bg-slate-50 group-hover:bg-white group-hover:shadow-2xs flex items-center justify-center transition-all">
+                            {opt.icon}
+                          </span>
+                          <div>
+                            <span className="block text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+                              {nativeLabel}
+                            </span>
+                            {subLabel && subLabel !== nativeLabel && (
+                              <span className="block text-[11px] text-slate-500 mt-0.5 font-medium">
+                                {subLabel}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Secondary row: Breathing Difficulty & Other Complaints Toggle */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {/* Breathing Difficulty option */}
+                    <button
+                      type="button"
+                      onClick={() => handleComplaintSelect('breathing')}
+                      className="p-2.5 text-left border border-slate-200/90 rounded-xl bg-white hover:border-teal-500 hover:bg-teal-50/20 transition cursor-pointer flex items-center gap-2.5 shadow-2xs"
+                    >
+                      <span className="text-xl w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center">💨</span>
+                      <div className="min-w-0">
+                        <span className="block text-xs font-bold text-slate-900 truncate">
+                          {lang === 'hi' ? 'सांस लेने में तकलीफ' : 'Breathing Difficulty'}
+                        </span>
+                        {lang !== 'en' && (
+                          <span className="block text-[10px] text-slate-500 font-medium">Breathing Difficulty</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Toggle Custom Complaint / Other */}
+                    <button
+                      type="button"
+                      onClick={() => setShowOtherComplaints(!showOtherComplaints)}
+                      className={`p-2.5 text-left border rounded-xl transition cursor-pointer flex items-center justify-between gap-2 shadow-2xs ${
+                        showOtherComplaints
+                          ? 'border-teal-600 bg-teal-50/60 text-teal-900 ring-1 ring-teal-500/20'
+                          : 'border-slate-200 bg-white hover:border-teal-500 hover:bg-teal-50/20 text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-lg w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-teal-700">✍️</span>
+                        <span className="text-xs font-bold truncate">
+                          {showOtherComplaints
+                            ? t('hideOtherComplaints', 'Hide other complaints')
+                            : t('typeOtherComplaint', '+ Other Complaints (Type / Speak)')}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-teal-700 shrink-0">
+                        {showOtherComplaints ? '−' : '+'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Interactive Custom Complaint Typing & Quick Suggestions Section */}
+                  {showOtherComplaints && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-4 rounded-2xl bg-gradient-to-b from-teal-50/60 to-slate-50 border border-teal-200/80 space-y-3 shadow-xs"
+                    >
+                      {/* Clinical AI & LLM Engine Indicator */}
+                      <div className="flex items-center justify-between pb-2 border-b border-teal-200/60">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="size-3.5 text-teal-700 animate-pulse" />
+                          <span className="text-[11px] font-bold text-teal-950">
+                            {lang === 'hi' ? 'एआई ट्राइएज प्रश्न निर्माण' : 'Clinical AI Adaptive Triage'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowLLMModal(true)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-[11px] font-bold text-teal-800 border border-teal-300 shadow-2xs transition cursor-pointer active:scale-95"
+                          title="Configure AI Model / LLM"
+                        >
+                          <Settings className="size-3 text-teal-600" />
+                          <span>
+                            {activeLLMConfig.provider === 'clinical_offline'
+                              ? 'AI: Built-in'
+                              : `AI: ${activeLLMConfig.provider.toUpperCase()}`}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* AI Question Generation Progress Banner */}
+                      {isGeneratingAIQuestions && (
+                        <div className="p-3 rounded-xl bg-teal-800 text-white flex items-center gap-3 animate-pulse shadow-xs">
+                          <Bot className="size-5 text-teal-300 animate-spin shrink-0" />
+                          <div className="text-xs">
+                            <p className="font-bold">
+                              {lang === 'hi' ? 'एआई आपके लक्षणों के अनुसार प्रश्न तैयार कर रहा है...' : 'AI is synthesizing clinical follow-up questions...'}
+                            </p>
+                            <p className="text-[10px] text-teal-200">SOCRATES Clinical Protocol</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Interactive Typing Input */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <span className="text-sm">📝</span>
+                            <span>{lang === 'hi' ? 'अपनी मुख्य समस्या का नाम लिखें:' : 'Type your specific health complaint:'}</span>
+                          </label>
+                          {customComplaintInput && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomComplaintInput('')
+                                setSelectedQuickChip(null)
+                              }}
+                              className="text-[11px] text-slate-400 hover:text-slate-700 font-semibold"
+                            >
+                              {t('clear', 'Clear')}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            value={customComplaintInput}
+                            onChange={(e) => {
+                              setCustomComplaintInput(e.target.value)
+                              setSelectedQuickChip(null)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleCustomComplaintSubmit()
+                            }}
+                            placeholder={
+                              lang === 'hi'
+                                ? 'उदा. घुटने में दर्द, त्वचा पर दाने, कान का दर्द, उल्टी, चक्कर...'
+                                : 'e.g., Knee joint pain, skin rash, ear infection, vomiting, dizziness...'
+                            }
+                            className="w-full pl-3.5 pr-24 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 shadow-2xs"
+                          />
+
+                          <div className="absolute right-1.5 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={isListening ? stopListening : startListening}
+                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                                isListening
+                                  ? 'bg-red-500 text-white animate-pulse'
+                                  : 'text-slate-400 hover:text-teal-700 hover:bg-slate-100'
+                              }`}
+                              title="Dictate your complaint"
+                            >
+                              <Mic className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCustomComplaintSubmit()}
+                              disabled={!customComplaintInput.trim()}
+                              className="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-30 disabled:pointer-events-none text-white text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{t('continue', 'Next')}</span>
+                              <ArrowRight className="size-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Suggestions Chips */}
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-600 mb-2">
+                          {lang === 'hi' ? 'या नीचे दिए गए मुख्य कारणों में से चुनें:' : 'Or choose from common complaints below:'}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {QUICK_COMPLAINT_CHIPS.map((chip) => {
+                            const chipLabel = lang === 'hi' ? chip.labelHi : chip.label
+                            const isSelected = selectedQuickChip === chip.id || customComplaintInput === chipLabel
+                            return (
+                              <button
+                                key={chip.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedQuickChip(chip.id)
+                                  setCustomComplaintInput(chipLabel)
+                                  handleCustomComplaintSubmit(chipLabel)
+                                }}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                                  isSelected
+                                    ? 'bg-teal-700 text-white border-teal-700 shadow-2xs ring-2 ring-teal-200'
+                                    : 'bg-white text-slate-700 border-slate-200/90 hover:border-teal-500 hover:bg-teal-50/40 shadow-2xs'
+                                }`}
+                              >
+                                <span>{chip.icon}</span>
+                                <span>{chipLabel}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  2. SEVERITY / SCALE SLIDER
+                  ────────────────────────────────── */}
+              {(currentQuestion.type === 'scale' || currentQuestion.id === 'pain_severity' || currentQuestion.id === 'socrates_severity') && (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-4">
+                  <div className="flex justify-between items-center text-xs font-medium text-slate-500">
+                    <span>1 • {t('mild', 'Mild')}</span>
+                    <span className="text-xs font-bold text-teal-800 bg-teal-100 px-3 py-1 rounded-full">
+                      {numberInput || '5'} / 10
+                    </span>
+                    <span>10 • {t('severe', 'Severe')}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={numberInput || 5}
+                    onChange={(e) => setNumberInput(e.target.value)}
+                    className="w-full accent-teal-700 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    aria-label="Pain severity slider"
+                  />
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectOption(String(Math.min(10, Math.max(1, parseInt(numberInput, 10) || 5))))}
+                      className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                    >
+                      {t('confirmSeverity', 'Confirm Severity')} ({Math.min(10, Math.max(1, parseInt(numberInput, 10) || 5))}/10)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  3. YES / NO BUTTONS
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'yes_no' && (
+                <div className="flex flex-col sm:flex-row gap-3 justify-center py-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectOption('yes')}
+                    className="w-full sm:flex-1 py-4 rounded-xl text-center font-bold text-base bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer shadow-xs"
+                  >
+                    {t('yes', 'Yes')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectOption('no')}
+                    className="w-full sm:flex-1 py-4 rounded-xl text-center font-bold text-base bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-700 hover:text-white transition-all cursor-pointer shadow-xs"
+                  >
+                    {t('no', 'No')}
+                  </button>
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  4. SINGLE SELECT OPTIONS
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'single_select' && currentQuestion.options && (
+                <div className="space-y-2">
+                  {currentQuestion.options.map((opt) => {
+                    const optLabel = getLocalizedOption(opt, lang)
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handleSelectOption(opt.value)}
+                        className="w-full p-3.5 text-left border border-slate-200 rounded-xl bg-white hover:border-teal-600 hover:bg-teal-50/20 transition-all cursor-pointer flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs"
+                      >
+                        <span>{optLabel}</span>
+                        <ArrowRight className="size-4 text-slate-400" />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  5. MULTI-SELECT OPTIONS
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'multi_select' && currentQuestion.options && (
+                <div className="space-y-2">
+                  {currentQuestion.options.map((opt) => {
+                    const optLabel = getLocalizedOption(opt, lang)
+                    const isSelected = selectedOptions.includes(opt.value)
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handleSelectOption(opt.value)}
+                        className={`w-full p-3.5 text-left transition-all cursor-pointer flex items-center justify-between text-xs sm:text-sm font-semibold rounded-xl border ${
+                          isSelected
+                            ? 'bg-teal-50/70 border-teal-600 text-teal-900 ring-1 ring-teal-600'
+                            : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <span>{optLabel}</span>
+                        <span
+                          className={`flex size-5 items-center justify-center rounded-md border ${
+                            isSelected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="size-3.5" />}
+                        </span>
+                      </button>
+                    )
+                  })}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSubmitCurrent}
+                      disabled={selectedOptions.length === 0}
+                      className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 disabled:opacity-40 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+                    >
+                      {t('confirm', 'Confirm')} ({selectedOptions.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  6. NUMERIC INPUT
+                  ────────────────────────────────── */}
+              {(currentQuestion.type === 'number' || currentQuestion.type === 'numeric_touch') && (
+                <div className="space-y-3">
+                  <TouchNumericKeypad
+                    value={numberInput}
+                    onChange={setNumberInput}
+                    onSubmit={handleSubmitCurrent}
+                    label={questionText}
+                    unit={currentQuestion.unit || ''}
+                  />
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  7. DATE PICKER
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'date' && (
+                <div className="space-y-3">
+                  <TouchDatePicker
+                    value={dateValue}
+                    onChange={setDateValue}
+                    onSubmit={handleSubmitCurrent}
+                  />
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  8. TEXT INPUT
+                  ────────────────────────────────── */}
+              {currentQuestion.type === 'text' && (
+                <div className="space-y-3">
+                  <textarea
+                    rows={3}
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder={t('speakOrChoose', 'Type details or use the microphone below...')}
+                    className="w-full p-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSubmitCurrent}
+                      disabled={!textInput.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 disabled:opacity-40 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+                    >
+                      {t('confirm', 'Submit Answer')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ──────────────────────────────────
+                  INTEGRATED VOICE ASSISTANT & AUDIO PLAYBACK
+                  ────────────────────────────────── */}
+              <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-teal-50/50 via-white to-slate-50 rounded-2xl p-3 sm:p-3.5 border border-teal-100/90 shadow-2xs">
+                  <div className="flex items-center gap-3 w-full sm:w-auto min-w-0">
+                    <button
+                      type="button"
+                      onClick={isListening ? stopListening : startListening}
+                      className={`size-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 ${
+                        isListening
+                          ? 'bg-gradient-to-tr from-rose-500 to-red-600 text-white shadow-md animate-pulse ring-4 ring-rose-100'
+                          : 'bg-gradient-to-tr from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white shadow-xs'
+                      }`}
+                      title={isListening ? 'Stop listening' : 'Tap to speak'}
+                    >
+                      {isListening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className={`text-xs font-bold ${isListening ? 'text-rose-700' : 'text-slate-900'}`}>
+                          {isListening
+                            ? (lang === 'hi' ? 'सुन रहा हूँ... बोलिए' : 'Listening... Speak now')
+                            : t('tapToSpeak', 'Tap to speak')}
+                        </p>
+                        {isListening && (
+                          <span className="inline-flex items-center gap-0.5 ml-1">
+                            <span className="w-1 h-3 bg-rose-500 rounded-full animate-pulse" />
+                            <span className="w-1 h-4 bg-rose-500 rounded-full animate-pulse delay-75" />
+                            <span className="w-1 h-2 bg-rose-500 rounded-full animate-pulse delay-150" />
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {transcript || interimTranscript || (lang === 'hi' ? 'अपनी भाषा में बोलें' : 'Speak naturally in your language')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                    {/* Replay recorded audio if captured */}
+                    {recordedAudioUrl && (
+                      <button
+                        type="button"
+                        onClick={handleTogglePlayRecordedAudio}
+                        className={`text-xs px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 cursor-pointer transition ${
+                          isPlayingRecordedAudio
+                            ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs'
+                        }`}
+                        title="Play back your voice answer"
+                      >
+                        {isPlayingRecordedAudio ? (
+                          <Square className="size-3 text-amber-700 fill-amber-700" />
+                        ) : (
+                          <Play className="size-3 text-teal-700 fill-teal-700" />
+                        )}
+                        <span className="font-semibold">
+                          {isPlayingRecordedAudio ? t('stop', 'Stop') : t('playRecording', 'Play Voice')}
+                        </span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowConversationalModal(true)}
+                      className="text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 border border-teal-200/80 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      <Zap className="size-3.5 text-teal-600" />
+                      <span>{t('conversationalAi', 'Voice AI')}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {voiceError === 'microphone_blocked' && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                    <span className="font-bold shrink-0">⚠️</span>
+                    <span>Microphone access was blocked. Please check mobile app permissions, or type your complaint above.</span>
+                  </div>
+                )}
+
+                {voiceMatchStatus && (
+                  <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+                    <span>Heard: <strong>"{voiceMatchStatus.heard}"</strong> → {voiceMatchStatus.normalized}</span>
+                    <span className="text-[11px] text-emerald-700 font-medium">Auto-advancing...</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Navigation Controls Bar */}
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={previousQuestion}
+              disabled={currentIndex === 0}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer flex items-center gap-1.5"
+            >
+              <ArrowLeft className="size-4" />
+              <span>{t('previous', 'Back')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                submitResponse(currentQuestion.id, '', null, 'skipped')
+                nextQuestion()
+              }}
+              className="text-xs font-medium text-slate-400 hover:text-slate-600 transition cursor-pointer px-3 py-2"
+            >
+              {t('skip', 'Skip this question')}
+            </button>
+          </div>
+        </div>
+      </main>
 
       {/* Inactivity Warning Countdown Modal */}
       <SessionTimeoutModal
@@ -810,70 +1133,67 @@ export default function InterviewScreen() {
       {/* Explicit End Session Confirmation Modal */}
       <AnimatePresence>
         {showEndSessionConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-border-light"
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border border-slate-200"
             >
-              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
-                <LogOut className="w-6 h-6" />
+              <div className="size-11 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3">
+                <LogOut className="size-5" />
               </div>
-              <h3 className="font-bold text-text-primary text-lg font-heading mb-1.5">
-                {t('endSession', 'End Kiosk Session?')}
+              <h3 className="font-bold text-slate-900 text-base font-heading mb-1">
+                {t('endSession', 'Exit Intake Session?')}
               </h3>
-              <p className="text-xs text-text-secondary mb-5">
-                {t('endSessionConfirm', 'Are you sure you want to end this session? Unsaved responses will be cleared for patient privacy.')}
+              <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+                {t('endSessionConfirm', 'Are you sure you want to exit? Your responses are saved automatically.')}
               </p>
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="md"
-                  fullWidth
+                <button
+                  type="button"
                   onClick={() => setShowEndSessionConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
+                  {t('cancel', 'Cancel')}
+                </button>
+                <button
+                  type="button"
                   onClick={handleEndSession}
-                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
                 >
-                  Yes, End
-                </Button>
+                  {t('endSession', 'Yes, Exit')}
+                </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Multilingual Conversational Voice AI Modal */}
+      {/* Conversational Voice AI Modal */}
       <ConversationalVoiceModal
         isOpen={showConversationalModal}
         onClose={() => setShowConversationalModal(false)}
-        onApplyIntake={handleApplyConversationalIntake}
         lang={lang}
+        onApplyIntake={handleApplyConversationalIntake}
       />
 
-      {/* Non-Diagnostic Red-Flag Clinical Safety Alert Modal */}
-      <RedFlagAlertModal
-        isOpen={isRedFlagOpen}
-        alertData={activeRedFlag}
-        lang={lang}
+      {/* Critical Red Flag Priority Alert Modal */}
+      {isRedFlagOpen && (
+        <RedFlagAlertModal
+          alert={activeRedFlag}
+          onAcknowledge={(alertId) => setAcknowledgedRedFlags(prev => [...prev, alertId])}
+        />
+      )}
+
+      {/* Clinical AI & LLM Engine Selector Modal */}
+      <LLMConfigModal
+        isOpen={showLLMModal}
         onClose={() => {
-          if (activeRedFlag) {
-            setAcknowledgedRedFlags(prev => [...prev, activeRedFlag.id])
-          }
-        }}
-        onAcknowledge={() => {
-          if (activeRedFlag) {
-            setAcknowledgedRedFlags(prev => [...prev, activeRedFlag.id])
-          }
+          setShowLLMModal(false)
+          setActiveLLMConfig(getLLMConfig())
         }}
       />
-    </BionicKioskShell>
+    </div>
   )
 }

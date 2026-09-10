@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import StitchAppHeader from '../../components/StitchAppHeader'
+import { speakText, stopSpeech } from '../../services/audioService'
 
 export default function ConsentScreen() {
   const [agreed, setAgreed] = useState(false)
@@ -46,32 +47,29 @@ export default function ConsentScreen() {
 
   const toggleAudioNarration = () => {
     if (isPlayingAudio) {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+      stopSpeech()
       clearInterval(audioIntervalRef.current)
       setIsPlayingAudio(false)
     } else {
       setIsPlayingAudio(true)
       const textToSpeak =
         lang === 'hi'
-          ? 'नमस्ते। आपका स्वास्थ्य डेटा पूरी तरह सुरक्षित है। आरोग्यदर्पण आपकी समस्या और लक्षणों को डॉक्टर शर्मा के लिए तैयार करता है। अंतिम निर्णय और दवा का अधिकार केवल आपके डॉक्टर का है। आप जब चाहें अपनी जानकारी बदल या हटा सकते हैं।'
-          : 'Hello. Your health data remains completely secure. ArogyaDarpan structures your symptoms for Dr. Sharma. 100% of final diagnosis and prescription rests with your doctor. You can edit or redact your information anytime.'
+          ? 'नमस्ते। आपका स्वास्थ्य डेटा पूरी तरह सुरक्षित है। आरोग्यदर्पण आपकी समस्या और लक्षणों को डॉक्टर के लिए तैयार करता है। अंतिम निर्णय और दवा का अधिकार केवल आपके डॉक्टर का है। आप जब चाहें अपनी जानकारी बदल या हटा सकते हैं।'
+          : 'Hello. Your health data remains completely secure. ArogyaDarpan structures your symptoms for your doctor. 100% of final diagnosis and prescription rests with your doctor. You can edit or redact your information anytime.'
 
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
-        const utterance = new SpeechSynthesisUtterance(textToSpeak)
-        utterance.rate = 0.95
-        utterance.lang = lang === 'hi' ? 'hi-IN' : speechLocale || 'en-IN'
-        utterance.onend = () => {
+      speakText(textToSpeak, {
+        lang: lang === 'hi' ? 'hi-IN' : speechLocale || 'en-IN',
+        onStart: () => setIsPlayingAudio(true),
+        onEnd: () => {
           setIsPlayingAudio(false)
           clearInterval(audioIntervalRef.current)
           setAudioSeconds(64)
-        }
-        utterance.onerror = () => {
+        },
+        onError: () => {
           setIsPlayingAudio(false)
           clearInterval(audioIntervalRef.current)
         }
-        window.speechSynthesis.speak(utterance)
-      }
+      })
 
       audioIntervalRef.current = setInterval(() => {
         setAudioSeconds((prev) => {

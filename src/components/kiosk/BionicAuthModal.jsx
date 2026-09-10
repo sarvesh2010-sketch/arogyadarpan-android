@@ -10,6 +10,7 @@ import {
   getRegisteredPatients,
   loginPatient,
   saveRegisteredPatient,
+  startNewPatientSession,
   generatePatientId
 } from '../../services/sessionStore'
 
@@ -61,7 +62,7 @@ export default function BionicAuthModal({ isOpen, onClose, onSuccess, initialMod
   // Confirm Login
   const handleVerifyOtp = () => {
     if (matchedPatient) {
-      const logged = loginPatient(matchedPatient)
+      const logged = startNewPatientSession(matchedPatient)
       onSuccess?.(logged)
       onClose?.()
     }
@@ -69,7 +70,7 @@ export default function BionicAuthModal({ isOpen, onClose, onSuccess, initialMod
 
   // Instant 1-Click Profile Selection
   const handleSelectDemo = (patient) => {
-    const logged = loginPatient(patient)
+    const logged = startNewPatientSession(patient)
     onSuccess?.(logged)
     onClose?.()
   }
@@ -102,8 +103,7 @@ export default function BionicAuthModal({ isOpen, onClose, onSuccess, initialMod
       registeredAt: new Date().toISOString(),
     }
 
-    saveRegisteredPatient(newPatient)
-    const logged = loginPatient(newPatient)
+    const logged = startNewPatientSession(newPatient)
     onSuccess?.(logged)
     onClose?.()
   }

@@ -21,6 +21,9 @@ export function useInterview(initialComplaint = null) {
   const [selectedComplaint, setSelectedComplaint] = useState(
     savedState?.selectedComplaint || initialComplaint || null
   )
+  const [customComplaintText, setCustomComplaintText] = useState(
+    savedState?.customComplaintText || ''
+  )
   const [currentIndex, setCurrentIndex] = useState(savedState?.currentIndex || 0)
   const [responses, setResponses] = useState(
     savedState?.responses || (savedResponses.length > 0 ? savedResponses : [])
@@ -39,11 +42,11 @@ export function useInterview(initialComplaint = null) {
     return calculateClinicalTriage({ responses })
   }, [responses])
 
-  // Build question sequence based on selected complaint, mode, and dynamic triage insights
+  // Build question sequence based on selected complaint, custom text, mode, and dynamic triage insights
   const questions = useMemo(() => {
     let base = mode === 'ayush'
       ? getAYUSHQuestionSequence(selectedComplaint || 'chest_pain')
-      : getQuestionSequence(selectedComplaint || 'chest_pain')
+      : getQuestionSequence(selectedComplaint || 'chest_pain', customComplaintText)
 
     // Inject dynamic follow-up questions if discovered by triage engine and not already in sequence
     if (triageData.dynamicQuestions && triageData.dynamicQuestions.length > 0) {
@@ -73,7 +76,7 @@ export function useInterview(initialComplaint = null) {
     })
 
     return base
-  }, [selectedComplaint, mode, triageData.dynamicQuestions, responses])
+  }, [selectedComplaint, customComplaintText, mode, triageData.dynamicQuestions, responses])
 
   // Real-time auto-saving of interview progress to sessionStore
   useEffect(() => {
@@ -81,6 +84,7 @@ export function useInterview(initialComplaint = null) {
       currentIndex,
       responses,
       selectedComplaint,
+      customComplaintText,
       mode,
       isComplete,
     })
@@ -92,7 +96,7 @@ export function useInterview(initialComplaint = null) {
         console.warn('Storage error:', e)
       }
     }
-  }, [currentIndex, responses, selectedComplaint, mode, isComplete])
+  }, [currentIndex, responses, selectedComplaint, customComplaintText, mode, isComplete])
 
   const currentQuestion = questions[currentIndex] || null
   const totalQuestions = questions.length
@@ -143,8 +147,13 @@ export function useInterview(initialComplaint = null) {
       return [...prev, response]
     })
 
-    if (questionId === 'chief_complaint' && structuredValue) {
-      setSelectedComplaint(structuredValue)
+    if (questionId === 'chief_complaint') {
+      if (structuredValue) {
+        setSelectedComplaint(structuredValue)
+      }
+      if (originalResponse) {
+        setCustomComplaintText(originalResponse)
+      }
     }
   }, [currentQuestion])
 
@@ -173,6 +182,7 @@ export function useInterview(initialComplaint = null) {
     setCurrentIndex(0)
     setResponses([])
     setSelectedComplaint(null)
+    setCustomComplaintText('')
     setIsComplete(false)
   }, [])
 
@@ -185,6 +195,8 @@ export function useInterview(initialComplaint = null) {
     responses,
     selectedComplaint,
     setSelectedComplaint,
+    customComplaintText,
+    setCustomComplaintText,
     isComplete,
     completeness,
     completenessPercent,
