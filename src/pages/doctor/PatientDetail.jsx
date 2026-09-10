@@ -217,30 +217,30 @@ export default function PatientDetail() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
         {/* Patient Profile & Critical Safety Banners */}
         <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 text-white font-heading font-bold text-xl flex items-center justify-center shadow-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 text-white font-heading font-bold text-lg sm:text-xl flex items-center justify-center shadow-md shrink-0">
                 {(patient.name || 'P')[0]}
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-heading font-bold text-lg text-slate-900">{patient.name}</h2>
-                  <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <h2 className="font-heading font-bold text-base sm:text-lg text-slate-900 truncate">{patient.name}</h2>
+                  <span className="font-mono text-[11px] sm:text-xs font-bold text-teal-800 bg-teal-50 px-2 sm:px-2.5 py-0.5 rounded-full border border-teal-200">
                     ABHA: {patient.abhaId || '91-8842-1920-4491'}
                   </span>
-                  <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <span className="font-mono text-[11px] sm:text-xs font-bold text-slate-600 bg-slate-100 px-2 sm:px-2.5 py-0.5 rounded-full">
                     Phone: {patient.phone || '+91 98765 43210'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-1 font-semibold">
+                <p className="text-xs text-slate-600 mt-1 font-semibold truncate">
                   Chief Complaint:{' '}
                   <span className="text-teal-800 font-bold">{patient.chiefComplaint || 'Chest pain for 3 days'}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <span className="px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-mono text-xs font-bold">
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <span className="px-2.5 sm:px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-mono text-[11px] sm:text-xs font-bold">
                 ESI Level 3 (Urgent)
               </span>
             </div>
@@ -318,93 +318,103 @@ export default function PatientDetail() {
               </div>
 
               {/* Section 1: Chief Complaint */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-slate-200/50">
+                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono break-words leading-relaxed flex-1">
                     1. Chief Complaint (મુખ્ય તકલીફ / मुख्य समस्या)
                   </span>
-                  <VerificationButtons
-                    status={sectionStatuses['chiefComplaint']}
-                    onConfirm={() => handleSectionVerify('chiefComplaint', 'confirmed')}
-                    onEdit={() => handleOpenEdit('chiefComplaint', 'Chief Complaint', summaryData.chiefComplaint || patient.chiefComplaint)}
-                    onReject={() => handleSectionVerify('chiefComplaint', 'rejected')}
-                  />
+                  <div className="shrink-0 flex items-center self-start sm:self-auto">
+                    <VerificationButtons
+                      status={sectionStatuses['chiefComplaint']}
+                      onConfirm={() => handleSectionVerify('chiefComplaint', 'confirmed')}
+                      onEdit={() => handleOpenEdit('chiefComplaint', 'Chief Complaint', summaryData.chiefComplaint || patient.chiefComplaint)}
+                      onReject={() => handleSectionVerify('chiefComplaint', 'rejected')}
+                    />
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-slate-900 pt-0.5">
                   {summaryData.chiefComplaint || patient.chiefComplaint || 'Chest pain for 3 days'}
                 </p>
               </div>
 
               {/* Section 2: History of Present Illness (HPI) */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-slate-200/50">
+                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono break-words leading-relaxed flex-1">
                     2. History of Present Illness (HPI - SOCRATES Framework)
                   </span>
-                  <VerificationButtons
-                    status={sectionStatuses['hpi']}
-                    onConfirm={() => handleSectionVerify('hpi', 'confirmed')}
-                    onEdit={() => handleOpenEdit('hpi', 'History of Present Illness', summaryData.hpi || 'Patient reported dull squeezing substernal pressure radiating to left arm.')}
-                    onReject={() => handleSectionVerify('hpi', 'rejected')}
-                  />
+                  <div className="shrink-0 flex items-center self-start sm:self-auto">
+                    <VerificationButtons
+                      status={sectionStatuses['hpi']}
+                      onConfirm={() => handleSectionVerify('hpi', 'confirmed')}
+                      onEdit={() => handleOpenEdit('hpi', 'History of Present Illness', summaryData.hpi || 'Patient reported dull squeezing substernal pressure radiating to left arm.')}
+                      onReject={() => handleSectionVerify('hpi', 'rejected')}
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-slate-800 leading-relaxed">
+                <p className="text-xs text-slate-800 leading-relaxed pt-0.5">
                   {summaryData.hpi || '48-year-old male with dull squeezing retrosternal chest pain starting 3 days ago on walking upstairs. Pain rated 7/10. Associated with mild diaphoresis and breathlessness. Relieved by resting for 10 minutes.'}
                 </p>
               </div>
 
               {/* Section 3: Past Medical History */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-slate-200/50">
+                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono break-words leading-relaxed flex-1">
                     3. Past Medical & Surgical History
                   </span>
-                  <VerificationButtons
-                    status={sectionStatuses['pastMedicalHistory']}
-                    onConfirm={() => handleSectionVerify('pastMedicalHistory', 'confirmed')}
-                    onEdit={() => handleOpenEdit('pastMedicalHistory', 'Past Medical History', summaryData.pastMedicalHistory || patient.chronicConditions)}
-                    onReject={() => handleSectionVerify('pastMedicalHistory', 'rejected')}
-                  />
+                  <div className="shrink-0 flex items-center self-start sm:self-auto">
+                    <VerificationButtons
+                      status={sectionStatuses['pastMedicalHistory']}
+                      onConfirm={() => handleSectionVerify('pastMedicalHistory', 'confirmed')}
+                      onEdit={() => handleOpenEdit('pastMedicalHistory', 'Past Medical History', summaryData.pastMedicalHistory || patient.chronicConditions)}
+                      onReject={() => handleSectionVerify('pastMedicalHistory', 'rejected')}
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-slate-800 font-medium">
+                <p className="text-xs text-slate-800 font-medium pt-0.5">
                   {summaryData.pastMedicalHistory || 'Type 2 Diabetes Mellitus diagnosed 4 years ago (Under treatment with Metformin 500mg). No prior myocardial infarction or stent placement.'}
                 </p>
               </div>
 
               {/* Section 4: Current Medications */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-slate-200/50">
+                  <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono break-words leading-relaxed flex-1">
                     4. Current Medications (Verified from Intake & OCR)
                   </span>
-                  <VerificationButtons
-                    status={sectionStatuses['medications']}
-                    onConfirm={() => handleSectionVerify('medications', 'confirmed')}
-                    onEdit={() => handleOpenEdit('medications', 'Current Medications', summaryData.medications || patient.currentMedications)}
-                    onReject={() => handleSectionVerify('medications', 'rejected')}
-                  />
+                  <div className="shrink-0 flex items-center self-start sm:self-auto">
+                    <VerificationButtons
+                      status={sectionStatuses['medications']}
+                      onConfirm={() => handleSectionVerify('medications', 'confirmed')}
+                      onEdit={() => handleOpenEdit('medications', 'Current Medications', summaryData.medications || patient.currentMedications)}
+                      onReject={() => handleSectionVerify('medications', 'rejected')}
+                    />
+                  </div>
                 </div>
-                <ul className="text-xs text-slate-800 font-medium space-y-1">
+                <ul className="text-xs text-slate-800 font-medium space-y-1 pt-0.5">
                   <li>• Tab Metformin 500 mg — Once daily after breakfast</li>
                   <li>• Tab Telmisartan 40 mg — Once daily morning</li>
                 </ul>
               </div>
 
               {/* Section 5: Allergies & Contradictions */}
-              <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-xs text-rose-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <AlertTriangle className="size-3.5 text-rose-600" />
-                    5. Known Allergies & Clinical Safety Discrepancies
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-rose-200/60">
+                  <span className="font-heading font-bold text-xs text-rose-900 uppercase tracking-wider font-mono flex items-center gap-1.5 break-words leading-relaxed flex-1">
+                    <AlertTriangle className="size-3.5 text-rose-600 shrink-0" />
+                    <span>5. Known Allergies & Clinical Safety Discrepancies</span>
                   </span>
-                  <VerificationButtons
-                    status={sectionStatuses['allergies']}
-                    onConfirm={() => handleSectionVerify('allergies', 'confirmed')}
-                    onEdit={() => handleOpenEdit('allergies', 'Allergies', summaryData.allergies || 'Penicillin hypersensitivity')}
-                    onReject={() => handleSectionVerify('allergies', 'rejected')}
-                  />
+                  <div className="shrink-0 flex items-center self-start sm:self-auto">
+                    <VerificationButtons
+                      status={sectionStatuses['allergies']}
+                      onConfirm={() => handleSectionVerify('allergies', 'confirmed')}
+                      onEdit={() => handleOpenEdit('allergies', 'Allergies', summaryData.allergies || 'Penicillin hypersensitivity')}
+                      onReject={() => handleSectionVerify('allergies', 'rejected')}
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-rose-900 font-semibold">
+                <p className="text-xs text-rose-900 font-semibold pt-0.5">
                   ⚠️ Penicillin / Amoxicillin hypersensitivity documented in historical discharge note (2024). Patient orally reported "No known drug allergies" during kiosk intake. Doctor must verify before prescription.
                 </p>
               </div>
