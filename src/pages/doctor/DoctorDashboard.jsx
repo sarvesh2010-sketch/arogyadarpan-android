@@ -408,7 +408,7 @@ export default function DoctorDashboard() {
             </div>
             <p className="font-heading font-black text-2xl sm:text-3xl text-emerald-700">{completedPatients.length}</p>
             <p className="text-[11px] text-slate-500 mt-1 font-medium truncate">
-              Prescriptions signed
+              Consultations completed
             </p>
           </div>
         </div>

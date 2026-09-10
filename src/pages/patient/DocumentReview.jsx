@@ -321,10 +321,10 @@ export default function DocumentReview() {
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <Pill className="size-3.5 text-teal-600" />
-                <span>{lang === 'hi' ? 'पहचानी गई दवाइयाँ' : 'Prescribed Medications'}</span>
+                <span>{lang === 'hi' ? 'दस्तावेज़ से पहचानी गई दवाइयाँ' : 'Detected Medications (From Uploaded Record)'}</span>
               </span>
               <span className="text-[11px] font-mono text-slate-400 font-medium">
-                {medications.length} items
+                {medications.length} items (Historical)
               </span>
             </div>
 

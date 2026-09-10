@@ -95,15 +95,10 @@ export default function PatientDetail() {
     textValue: ''
   })
 
-  // Physician Clinical Notes & Orders State
+  // Physician Clinical Notes & Consultation State
   const [physicianOrders, setPhysicianOrders] = useState({
     diagnosis: '',
     clinicalNotes: '',
-    medications: [
-      { name: 'Tab Aspirin 75 mg', instructions: 'Once daily after breakfast', duration: '30 days' },
-      { name: 'Tab Atorvastatin 20 mg', instructions: 'Once daily at bedtime', duration: '30 days' },
-    ],
-    labOrders: ['12-Lead ECG (STAT)', 'Serum Troponin-I', 'Lipid Profile', 'HbA1c'],
     isSigned: false,
     signedAt: null
   })
@@ -381,7 +376,7 @@ export default function PatientDetail() {
               <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-slate-200/50">
                   <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider font-mono break-words leading-relaxed flex-1">
-                    4. Current Medications (Verified from Intake & OCR)
+                    4. Current Home Medications (Verified from Intake & Scanned Documents)
                   </span>
                   <div className="shrink-0 flex items-center self-start sm:self-auto">
                     <VerificationButtons
@@ -396,6 +391,9 @@ export default function PatientDetail() {
                   <li>• Tab Metformin 500 mg — Once daily after breakfast</li>
                   <li>• Tab Telmisartan 40 mg — Once daily morning</li>
                 </ul>
+                <p className="text-[11px] text-slate-500 italic pt-1 border-t border-slate-200/50">
+                  * Pre-existing home medications reported by patient / extracted from past paper records. AI does NOT prescribe medications.
+                </p>
               </div>
 
               {/* Section 5: Allergies & Contradictions */}
@@ -420,7 +418,7 @@ export default function PatientDetail() {
               </div>
             </div>
 
-            {/* Physician Orders & Prescription Pad */}
+            {/* Physician Clinical Assessment & Consultation Sign-Off */}
             <div className="p-5 rounded-3xl bg-white border border-teal-500/40 shadow-md space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2.5">
@@ -429,7 +427,7 @@ export default function PatientDetail() {
                   </div>
                   <div>
                     <h3 className="font-heading font-bold text-sm sm:text-base text-slate-900">
-                      Physician Orders & Consultation Sign-Off
+                      Physician Clinical Assessment & Sign-Off
                     </h3>
                     <p className="text-xs text-slate-500">Dr. Ananya Sharma • DMC-2018-4921</p>
                   </div>
@@ -454,7 +452,7 @@ export default function PatientDetail() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Physician Clinical Directives & Notes
+                    Physician Clinical Directives & Examination Notes
                   </label>
                   <textarea
                     rows={2}
@@ -465,15 +463,27 @@ export default function PatientDetail() {
                   />
                 </div>
 
-                <div className="p-3 rounded-2xl bg-teal-50/50 border border-teal-200/70 space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase text-teal-900 block">
-                    Active STAT Orders & Prescriptions:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
-                    <span className="p-2 rounded-xl bg-white border border-teal-100">📋 STAT 12-Lead ECG & Serum Troponin-I</span>
-                    <span className="p-2 rounded-xl bg-white border border-teal-100">💊 Tab Ecosprin 75mg OD</span>
-                    <span className="p-2 rounded-xl bg-white border border-teal-100">💊 Tab Rosuvastatin 20mg QHS</span>
-                    <span className="p-2 rounded-xl bg-white border border-teal-100">🥗 Low Sodium Diabetic Diet Advice</span>
+                {/* Non-Prescription Safety Protocol & Diagnostic Investigations */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                    <ShieldCheck className="size-4 text-teal-700 shrink-0" />
+                    <span>Clinical Intake Guardrail • Zero AI Medication Prescribing</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    ArogyaDarpan is an intake triage and history synthesis system. In compliance with medical safety standards, <strong>AI does not prescribe medicines or recommend drug regimens</strong>. All pharmaceutical treatments are strictly determined and prescribed directly by the consulting physician.
+                  </p>
+                  <div className="pt-2 border-t border-slate-200/80">
+                    <span className="font-mono text-[10px] font-bold uppercase text-slate-500 block mb-1.5">
+                      Recommended Diagnostic Workup & Non-Pharmacological Care:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium text-slate-700">
+                      <span className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-1.5">
+                        <span>📋</span> STAT 12-Lead ECG & Serum Troponin-I
+                      </span>
+                      <span className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-1.5">
+                        <span>🥗</span> Low Sodium Diabetic Diet Counseling
+                      </span>
+                    </div>
                   </div>
                 </div>
 
